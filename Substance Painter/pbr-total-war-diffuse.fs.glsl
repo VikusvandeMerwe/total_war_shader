@@ -62,6 +62,8 @@ uniform sampler2D s_ambient_occlusion;
 uniform sampler2D s_ambient;
 //: param auto channel_reflection
 uniform sampler2D s_environment_map;
+//: param auto channel_blendingmask
+uniform sampler2D s_dirtmap_uv2;
 
 //: param custom { "default": true, "label": "Shadows" }
 uniform bool b_shadows;
@@ -193,7 +195,7 @@ vec3 normalSwizzle_UPDATED(in vec3 ref)
 #ifdef FXCOMPOSER
 	return ref.xyz;
 #else
-	return vec3(ref.x, ref.z, ref.y);
+  return vec3(ref.x, ref.z, ref.y);
 #endif
 }
 
@@ -340,7 +342,8 @@ void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specu
 
 	float d_strength = 1.0;
 
-	vec2 dirt_normal = (vec2(dirtmap.r, dirtmap.g) * 2.0) - 1.0;
+	// vec2 dirt_normal = (vec2(dirtmap.r, dirtmap.g) * 2.0) - 1.0;
+  vec2 dirt_normal = vec2(dirtmap.r, dirtmap.g);
 
 	float dirt_alpha = dirtmap.a;
 	float dirt_alpha_blend = mask_alpha * dirt_alpha * d_strength;

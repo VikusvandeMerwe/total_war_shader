@@ -860,11 +860,11 @@ vec4 shade(V2F inputs)
 {
   vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
 
-  vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
 
   vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  alpha_test(diffuse_colour.a);
+	alpha_test(diffuse_colour.a);
 
   vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -876,15 +876,31 @@ vec4 shade(V2F inputs)
 
   reflectivity = _linear(reflectivity);
 
+	float mask_p1 = texture(s_mask1, inputs.tex_coord.xy).r;
+	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
+	float mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
+
+
+	if (b_faction_colouring)
+	{
+		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_0.rgb)), mask_p1);
+		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_1.rgb)), mask_p2);
+		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_2.rgb)), mask_p3);
+	}
+	else
+	{
+		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
+		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
+		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+	}
+
   mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
-  mat3 basis = MAXTBN;
-  vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-  vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+	mat3 basis = MAXTBN;
+	vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
+	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
 
-  ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0, vec4_uv_rect, 1 - inputs.color[0].a);
-
-  vec3 pixel_normal = normalize(basis * normalize(N));
+	vec3 pixel_normal = normalize(basis * normalize(N));
 
   StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
 

@@ -62,6 +62,8 @@ uniform sampler2D s_ambient_occlusion;
 uniform sampler2D s_ambient;
 //: param auto channel_reflection
 uniform sampler2D s_environment_map;
+//: param auto channel_blendingmask
+uniform sampler2D s_dirtmap_uv2;
 
 //: param custom { "default": true, "label": "Shadows" }
 uniform bool b_shadows;
@@ -900,7 +902,7 @@ vec4 shade(V2F inputs)
 
 	vec3 pixel_normal = normalize(basis * normalize(N));
 
-  StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.tex_coord.xy, 1.0, 1.0));
+  StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
 
   vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
 
