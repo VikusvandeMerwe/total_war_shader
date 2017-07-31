@@ -1,8 +1,7 @@
 // Tobias Czyzewski Total War Shader
 // =================================
 
-#version 120
-#extension GL_ARB_shader_texture_lod : require
+// #version 330
 
 // Vertex shader output
 struct V2F {
@@ -16,12 +15,18 @@ struct V2F {
 };
 
 //: param auto camera_view_matrix_it
-mat4 vMatrixI;
+uniform mat4 camera_view_matrix_it;
 
-uniform float light_position0_x = 0.0;
-uniform float light_position0_y = 0.0;
-uniform float light_position0_z = 0.0;
-uniform vec3 light_color0 = vec3(1.0, 1.0, 1.0);
+mat4 vMatrixI = transpose(camera_view_matrix_it);
+
+//: param custom { "default": 0, "label": "Light Position X", "min": -100, "max": 100 }
+uniform int light_position0_x;
+//: param custom { "default": 0, "label": "Light Position Y", "min": -100, "max": 100 }
+uniform int light_position0_y;
+//: param custom { "default": 0, "label": "Light Position Z", "min": -100, "max": 100 }
+uniform int light_position0_z;
+//: param custom { "default": [1.0, 1.0, 1.0], "label": "Light Color", "widget": "color" }
+uniform vec3 light_color0;
 
 //: param auto channel_diffuse
 uniform sampler2D s_diffuse_colour;
@@ -29,7 +34,7 @@ uniform sampler2D s_diffuse_colour;
 uniform sampler2D s_smoothness;
 //: param auto channel_normal
 uniform sampler2D s_normal_map;
-//: param auto channel_reflection
+//: param auto channel_specularlevel
 uniform sampler2D s_reflectivity;
 //: param auto channel_specular
 uniform sampler2D s_specular_colour;
@@ -52,26 +57,42 @@ uniform sampler2D s_decal_dirtmap;
 //: param auto channel_anisotropyangle
 uniform sampler2D s_decal_dirtmask;
 //: param auto channel_ambientocclusion
-uniform samplerCube s_ambient;
+uniform sampler2D s_ambient_occlusion;
+//: param auto channel_transmissive
+uniform sampler2D s_ambient;
 //: param auto channel_reflection
-uniform samplerCube s_environment_map;
+uniform sampler2D s_environment_map;
 
-uniform bool b_shadows = true;
-uniform bool b_alpha_off = true;
-uniform int i_alpha_mode = 0;
-uniform bool b_faction_colouring = true;
-uniform float f_uv_offset_u = 0;
-uniform float f_uv_offset_v = 0;
-uniform bool b_do_decal = false;
-uniform bool b_do_dirt = false;
-uniform vec4 vec4_colour_0 = vec4(0.5, 0.1, 0.1, 1.0);
-uniform vec4 vec4_colour_1 = vec4(0.3, 0.6, 0.5, 1.0);
-uniform vec4 vec4_colour_2 = vec4(0.5, 0.2, 0.1, 1.0);
-uniform int i_random_tile_u = 1;
-uniform int i_random_tile_v = 1;
-uniform float f_uv2_tile_interval_u = 4.0;
-uniform float f_uv2_tile_interval_v = 4.0;
-uniform vec4 vec4_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
+//: param custom { "default": true, "label": "Shadows" }
+uniform bool b_shadows;
+//: param custom { "default": true, "label": "Alpha Off" }
+uniform bool b_alpha_off;
+//: param custom { "default": 0, "label": "Alpha Mode", "min": 0, "max": 2 }
+uniform int i_alpha_mode;
+//: param custom { "default": true, "label": "Faction Colouring" }
+uniform bool b_faction_colouring;
+//: param custom { "default": 0.0, "label": "UV Offset U", "min": -500.0, "max": 500.0, "step": 1.0 }
+uniform float f_uv_offset_u;
+//: param custom { "default": 0.0, "label": "UV Offset V", "min": -500.0, "max": 500.0, "step": 1.0 }
+uniform float f_uv_offset_v;
+//: param custom { "default": false, "label": "Enable Decal" }
+uniform bool b_do_decal;
+//: param custom { "default": false, "label": "Enable Dirt" }
+uniform bool b_do_dirt;
+//: param custom { "default": [0.5, 0.1, 0.1, 1.0], "label": "Tint Color 1", "widget": "color" }
+uniform vec4 vec4_colour_0;
+//: param custom { "default": [0.3, 0.6, 0.5, 1.0], "label": "Tint Color 2", "widget": "color" }
+uniform vec4 vec4_colour_1;
+//: param custom { "default": [0.5, 0.2, 0.1, 1.0], "label": "Tint Color 3", "widget": "color" }
+uniform vec4 vec4_colour_2;
+//: param custom { "default": 1, "label": "Dirt Tile U", "min": 0, "max": 1 }
+uniform int i_random_tile_u;
+//: param custom { "default": 1, "label": "Dirt Tile V", "min": 0, "max": 1 }
+uniform int i_random_tile_v;
+//: param custom { "default": 4.0, "label": "Detail Tile U", "min": -100.0, "max": 100.0, "step": 1.0 }
+uniform float f_uv2_tile_interval_u;
+//: param custom { "default": 4.0, "label": "Detail Tile V", "min": -100.0, "max": 100.0, "step": 1.0 }
+uniform float f_uv2_tile_interval_v;
 
 /////////////////////////
 // Parameters
@@ -83,6 +104,8 @@ const float pi = 3.14159265;
 const float one_over_pi = 1.0 / 3.14159265;
 const float real_approx_zero = 0.001;
 const float texture_alpha_ref = 0.5;
+
+const vec4 vec4_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
 
 //	Tone mapping parameters
 const float Tone_Map_Black = 0.001;
@@ -206,12 +229,14 @@ float get_scurve_y_pos(const float x_coord);
 
 vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
 {
-	return _linear(textureCubeLod(s_environment_map, texcoordEnvSwizzle(direction), lod).rgb);
+	// return _linear(textureLod(s_environment_map, texcoordEnvSwizzle(direction).xy, lod).rgb);
+  return vec3(0.0, 0.0, 0.0);
 }
 
 vec3 cube_ambient(in vec3 N)
 {
-  return _linear(textureCube(s_ambient, texcoordEnvSwizzle(N)).rgb);
+  // return _linear(texture(s_ambient, texcoordEnvSwizzle(N).xy).rgb);
+  return vec3(0.0, 0.0, 0.0);
 }
 
 vec2 phong_diffuse(in vec3 N, in vec3 L)
@@ -283,17 +308,16 @@ void ps_common_blend_decal(in vec4 colour, in vec3 normal, in vec3 specular, in 
 	vec2 decal_top_left = uv_rect_coords.xy;
 	vec2 decal_dimensions = uv_rect_coords.zw - uv_rect_coords.xy;
 
-	vec2 decal_uv = (uv-decal_top_left)/decal_dimensions;
+	vec2 decal_uv = (uv-decal_top_left) / decal_dimensions;
 
 	vec4 decal_diffuse;
 	vec3 decal_normal;
 
-	decal_diffuse = texture2D(s_decal_diffuse, decal_uv).rgba;
+	decal_diffuse = texture(s_decal_diffuse, decal_uv).rgba;
   decal_diffuse.rgb = _linear(decal_diffuse.rgb);
-  vec3 dNp = texture2D(s_decal_normal, decal_uv).rgb;
-  dNp.g = 1.0 - dNp.g;
+  vec3 dNp = texture(s_decal_normal, decal_uv).rgb;
 	decal_normal = normalSwizzle_UPDATED((dNp.rgb * 2.0) - 1.0);
-	float decal_mask = texture2D(s_decal_mask, uv).a;
+	float decal_mask = texture(s_decal_mask, uv).a;
 
 	float decalblend = decal_mask * decal_diffuse.a * valpha;
 	oreflectivity = mix(reflectivity, reflectivity * 0.5, decalblend);
@@ -311,9 +335,8 @@ void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specu
 {
 	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
 
-	float mask_alpha = texture2D(s_decal_dirtmask, uv).a;
-	vec4 dirtmap = texture2D(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
-  dirtmap.g = 1.0 - dirtmap.g;
+	float mask_alpha = texture(s_decal_dirtmask, uv).a;
+	vec4 dirtmap = texture(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
 
 	float d_strength = 1.0;
 
@@ -340,8 +363,7 @@ void ps_common_blend_vfx(inout vec4 colour, inout vec3 normal, in vec3 specular,
 {
 	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
 
-	vec4 dirtmap = texture2D(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
-  dirtmap.g = 1.0 - dirtmap.g;
+	vec4 dirtmap = texture(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
 
 	ocolour = vec4(mix(colour.rgb, dirtmap.rgb, dirtmap.a), 1.0);
 
@@ -833,21 +855,9 @@ vec3 tone_map_linear_hdr_pixel_value(in vec3 linear_hdr_pixel_val)
 // Shader entry point
 vec4 shade(V2F inputs)
 {
-  vMatrixI = transpose(vMatrixI);
-  vec4 diffuse_colour = texture2D(s_diffuse_colour, inputs.tex_coord.xy);
-  vec3 light_vector = normalize(light_position0.xyz -  inputs.position);
+  vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
 
-  mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  mat3 basis = MAXTBN;
-  vec4 Np = texture2D(s_normal_map, inputs.tex_coord.xy);
-  Np.g = 1.0 - Np.g;
-  vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
-  vec3 pixel_normal = normalize(basis * normalize(N));
-
-  vec3 ndotl = vec3(clamp(dot(pixel_normal, light_vector), 0.0, 1.0));
-
-  return vec4(_gamma(ndotl), diffuse_colour.a);
+  return vec4(ao.rgb, 1.0);
 }
 
 void shadeShadow(V2F inputs)
