@@ -4,15 +4,15 @@
 // #version 330
 
 // Vertex shader output
-struct V2F {
-  vec3 normal;               // interpolated normal
-  vec3 tangent;              // interpolated tangent
-  vec3 bitangent;            // interpolated bitangent
-  vec3 position;             // interpolated position
-  vec4 color[1];             // interpolated vertex colors (color0)
-  vec2 tex_coord;            // interpolated texture coordinates (uv0)
-  vec2 multi_tex_coord[8];   // interpolated texture coordinates (uv0-uv7)
-};
+// struct V2F {
+//   vec3 normal;               // interpolated normal
+//   vec3 tangent;              // interpolated tangent
+//   vec3 bitangent;            // interpolated bitangent
+//   vec3 position;             // interpolated position
+//   vec4 color[1];             // interpolated vertex colors (color0)
+//   vec2 tex_coord;            // interpolated texture coordinates (uv0)
+//   vec2 multi_tex_coord[8];   // interpolated texture coordinates (uv0-uv7)
+// };
 
 //: param auto camera_view_matrix_it
 uniform mat4 camera_view_matrix_it;
