@@ -2,8 +2,8 @@
 // =================================
 
 // #version 330
-
-// Vertex shader output
+//
+// // Vertex shader output
 // struct V2F {
 //   vec3 normal;               // interpolated normal
 //   vec3 tangent;              // interpolated tangent
@@ -19,14 +19,57 @@ uniform mat4 camera_view_matrix_it;
 
 mat4 vMatrixI = transpose(camera_view_matrix_it);
 
-//: param custom { "default": 0, "label": "Light Position X", "min": -100, "max": 100 }
-uniform int light_position0_x;
-//: param custom { "default": 0, "label": "Light Position Y", "min": -100, "max": 100 }
-uniform int light_position0_y;
-//: param custom { "default": 0, "label": "Light Position Z", "min": -100, "max": 100 }
-uniform int light_position0_z;
-//: param custom { "default": [1.0, 1.0, 1.0], "label": "Light Color", "widget": "color" }
+//: param custom {
+//:   "default": 9,
+//:   "label": "Technique",
+//:   "widget": "combobox",
+//:   "values": {
+//:     "Ambient Occlusion": 0,
+//:     "Vertex Color": 1,
+//:     "Reflection": 2,
+//:     "Custom Terrain": 3,
+//:     "Decal Dirt": 4,
+//:     "Diffuse": 5,
+//:     "Full Ambient Occlusion": 6,
+//:     "Full Dirtmap": 7,
+//:     "Full Skin": 8,
+//:     "Full Standard": 9,
+//:     "Full Tint": 10,
+//:     "Mask 1": 11,
+//:     "Mask 2": 12,
+//:     "Mask 3": 13,
+//:     "N Dot L": 14,
+//:     "Normal": 15,
+//:     "Reflectivity": 16,
+//:     "Glossiness": 17,
+//:     "Solid Alpha": 18,
+//:     "Specular": 19,
+//:     "World Space Normal": 20
+//:   }
+//: }
+uniform int i_technique;
+
+//: param custom { "default": [1.0, 1.0, 1.0], "label": "Light Color", "widget": "color", "group": "Scene Lightning" }
 uniform vec3 light_color0;
+//: param custom { "default": 0, "label": "Relative Light Position X", "min": -100, "max": 100, "group": "Scene Lightning" }
+uniform int light_relative0_x;
+//: param custom { "default": 0, "label": "Relative Light Position Y", "min": -100, "max": 100, "group": "Scene Lightning" }
+uniform int light_relative0_y;
+//: param custom { "default": 0, "label": "Relative Light Position Z", "min": -100, "max": 100, "group": "Scene Lightning" }
+uniform int light_relative0_z;
+//: param custom { "default": false, "label": "Absolute Light Position", "group": "Scene Lightning" }
+uniform bool light_absolute0;
+//: param custom { "default": 10, "label": "Absolute Light Position X", "min": -100, "max": 100, "group": "Scene Lightning" }
+uniform int light_absolute0_x;
+//: param custom { "default": 20, "label": "Absolute Light Position Y", "min": -100, "max": 100, "group": "Scene Lightning" }
+uniform int light_absolute0_y;
+//: param custom { "default": 10, "label": "Absolute Light Position Z", "min": -100, "max": 100, "group": "Scene Lightning" }
+uniform int light_absolute0_z;
+
+vec4 light_position0;
+
+//: param custom { "default": "Environment_Sharp", "label": "Reflection Map", "usage": "environment", "group": "Scene Lightning" }
+uniform sampler2D s_environment_map;
 
 //: param auto channel_diffuse
 uniform sampler2D s_diffuse_colour;
@@ -58,52 +101,47 @@ uniform sampler2D s_decal_dirtmap;
 uniform sampler2D s_decal_dirtmask;
 //: param auto channel_ambientocclusion
 uniform sampler2D s_ambient_occlusion;
-//: param auto channel_transmissive
-uniform sampler2D s_ambient;
-//: param auto channel_reflection
-uniform sampler2D s_environment_map;
 //: param auto channel_blendingmask
 uniform sampler2D s_dirtmap_uv2;
 
-//: param custom { "default": true, "label": "Shadows" }
-uniform bool b_shadows;
+// param custom { "default": true, "label": "Shadows", "group": "Scene Lightning" }
+// uniform bool b_shadows;
+
 //: param custom { "default": true, "label": "Alpha Off" }
 uniform bool b_alpha_off;
 //: param custom { "default": 0, "label": "Alpha Mode", "min": 0, "max": 2 }
 uniform int i_alpha_mode;
 //: param custom { "default": true, "label": "Faction Colouring" }
 uniform bool b_faction_colouring;
-//: param custom { "default": 0.0, "label": "UV Offset U", "min": -500.0, "max": 500.0, "step": 1.0 }
-uniform float f_uv_offset_u;
-//: param custom { "default": 0.0, "label": "UV Offset V", "min": -500.0, "max": 500.0, "step": 1.0 }
-uniform float f_uv_offset_v;
-//: param custom { "default": false, "label": "Enable Decal" }
-uniform bool b_do_decal;
-//: param custom { "default": false, "label": "Enable Dirt" }
-uniform bool b_do_dirt;
 //: param custom { "default": [0.5, 0.1, 0.1, 1.0], "label": "Tint Color 1", "widget": "color" }
 uniform vec4 vec4_colour_0;
 //: param custom { "default": [0.3, 0.6, 0.5, 1.0], "label": "Tint Color 2", "widget": "color" }
 uniform vec4 vec4_colour_1;
 //: param custom { "default": [0.5, 0.2, 0.1, 1.0], "label": "Tint Color 3", "widget": "color" }
 uniform vec4 vec4_colour_2;
-//: param custom { "default": 1, "label": "Dirt Tile U", "min": 0, "max": 1 }
+//: param custom { "default": false, "label": "Enable Decal" }
+uniform bool b_do_decal;
+//: param custom { "default": false, "label": "Enable Dirt", "group": "Dirt" }
+uniform bool b_do_dirt;
+//: param custom { "default": 1, "label": "Enable Offset U", "min": 0, "max": 1, "group": "Dirt" }
 uniform int i_random_tile_u;
-//: param custom { "default": 1, "label": "Dirt Tile V", "min": 0, "max": 1 }
+//: param custom { "default": 1, "label": "Enable Offset V", "min": 0, "max": 1, "group": "Dirt" }
 uniform int i_random_tile_v;
-//: param custom { "default": 4.0, "label": "Detail Tile U", "min": -100.0, "max": 100.0, "step": 1.0 }
+//: param custom { "default": 0.0, "label": "UV Offset U", "min": -1.0, "max": 1.0, "step": 0.01, "group": "Dirt" }
+uniform float f_uv_offset_u;
+//: param custom { "default": 0.0, "label": "UV Offset V", "min": -1.0, "max": 1.0, "step": 0.01, "group": "Dirt" }
+uniform float f_uv_offset_v;
+//: param custom { "default": 4.0, "label": "Tile Factor U", "min": -100.0, "max": 100.0, "step": 1.0, "group": "Dirt" }
 uniform float f_uv2_tile_interval_u;
-//: param custom { "default": 4.0, "label": "Detail Tile V", "min": -100.0, "max": 100.0, "step": 1.0 }
+//: param custom { "default": 4.0, "label": "Tile Factor V", "min": -100.0, "max": 100.0, "step": 1.0, "group": "Dirt" }
 uniform float f_uv2_tile_interval_v;
 
 /////////////////////////
 // Parameters
 /////////////////////////
 
-vec4 light_position0 = vMatrixI * vec4(light_position0_x, light_position0_y, light_position0_z, 1.0);
-
 const float pi = 3.14159265;
-const float one_over_pi = 1.0 / 3.14159265;
+const float one_over_pi = 0.31830988618379067153776752674503;
 const float real_approx_zero = 0.001;
 const float texture_alpha_ref = 0.5;
 
@@ -229,15 +267,21 @@ float get_scurve_y_pos(const float x_coord);
 // Lighting Functions
 /////////////////////////
 
+// vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
+// {
+// 	return textureLod(s_environment_map, texcoordEnvSwizzle(direction).rg, lod).rgb;
+// }
+
 vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
 {
-	// return _linear(textureLod(s_environment_map, texcoordEnvSwizzle(direction).xy, lod).rgb);
-  return vec3(0.0, 0.0, 0.0);
+  vec2 pos = one_over_pi * vec2(atan(-direction.z, -1.0 * direction.x), 2.0 * asin(direction.y));
+  pos = (0.5 * pos) + vec2(0.5);
+  return textureLod(s_environment_map, pos, lod).rgb;
 }
 
 vec3 cube_ambient(in vec3 N)
 {
-  // return _linear(texture(s_ambient, texcoordEnvSwizzle(N).xy).rgb);
+  // return _linear(texture(s_ambient, texcoordEnvSwizzle(N).rg).rgb);
   return vec3(0.0, 0.0, 0.0);
 }
 
@@ -731,14 +775,14 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
 
   dlight_diffuse *= diffuse_scale_factor;
 
-	if (!b_shadows)
-	{
-		material.Shadow = 1.0;
-	}
-	else
-	{
-		material.Shadow = material.Shadow;
-	}
+	// if (!b_shadows)
+	// {
+	// 	material.Shadow = 1.0;
+	// }
+	// else
+	// {
+	// 	material.Shadow = material.Shadow;
+	// }
 	float shadow_attenuation = material.Shadow;
 	float reflection_shadow_attenuation = (1.0 - ((1.0 - material.Shadow) * 0.75));
 
@@ -858,57 +902,492 @@ vec3 tone_map_linear_hdr_pixel_value(in vec3 linear_hdr_pixel_val)
 // Shader entry point
 vec4 shade(V2F inputs)
 {
-  vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+  if (i_technique == 0) // Ambient Occlusion
+  {
+    vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
 
-	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+    return vec4(ao.rgb, 1.0);
+  } else if (i_technique == 1) // Vertex Color
+  {
+    vec4 Ct = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+    return vec4(inputs.color[0].rgb, Ct.a);
+  } else if (i_technique == 2) // Reflection
+  {
+    vec3 pI = normalize(vMatrixI[3].xyz - inputs.position);
 
-	alpha_test(diffuse_colour.a);
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
-  vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+    mat3 basis = MAXTBN;
+    vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
+    vec3 N = normalSwizzle((Np.rgb * 2.0) - 1.0);
 
-  float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+    vec3 nN = normalize(basis * N);
+    vec3 refl = reflect(pI, nN);
+    refl.z = -refl.z;
+    vec3 env = get_environment_colour_UPDATED(refl, 0.0);
 
-  smoothness = _linear(smoothness);
+    return vec4(env.rgb, 1.0);
+  } else if (i_technique == 3) // Custom Terrain
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
 
-  float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
 
-  reflectivity = _linear(reflectivity);
+    vec3 light_vector = normalize(light_position0.xyz - inputs.position);
 
-	float mask_p1 = texture(s_mask1, inputs.tex_coord.xy).r;
-	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
-	float	mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
-	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
-	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+    alpha_test(diffuse_colour.a);
 
-  mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
-	mat3 basis = MAXTBN;
-	vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
 
-	if (b_do_decal)
-	{
-		ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0, vec4_uv_rect, 1.0);
-	}
+    smoothness = _linear(smoothness);
 
-	if (b_do_dirt)
-	{
-		ps_common_blend_dirtmap(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, vec2(f_uv_offset_u, f_uv_offset_v));
-	}
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
 
-	vec3 pixel_normal = normalize(basis * normalize(N));
+    reflectivity = _linear(reflectivity);
 
-  StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
-  vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+    mat3 basis = MAXTBN;
+    vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
+    vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
 
-  vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+    ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0, vec4_uv_rect, 1 - inputs.color[0].a);
 
-  return vec4(ldr_linear_col, 1.0);
+    vec3 pixel_normal = normalize(basis * normalize(N));
+
+    StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 4) // Decal Dirt
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+
+  	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+
+    smoothness = _linear(smoothness);
+
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+
+    reflectivity = _linear(reflectivity);
+
+  	float mask_p1 = texture(s_mask1, inputs.tex_coord.xy).r;
+  	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
+  	float	mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
+
+  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
+  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
+  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+  	mat3 basis = MAXTBN;
+  	vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
+  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+
+  	if (b_do_decal)
+  	{
+  		ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0, vec4_uv_rect, 1.0);
+  	}
+
+  	if (b_do_dirt)
+  	{
+  		ps_common_blend_dirtmap(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, vec2(f_uv_offset_u, f_uv_offset_v));
+  	}
+
+  	vec3 pixel_normal = normalize(basis * normalize(N));
+
+    StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 5) // Diffuse
+  {
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    return vec4(diffuse_colour.rgb, 1.0);
+  } else if (i_technique == 6) // Full Ambient Occlusion
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+
+  	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+
+    smoothness = _linear(smoothness);
+
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+
+    reflectivity = _linear(reflectivity);
+
+  	vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
+  	diffuse_colour.rgb *= ao.rgb;
+  	specular_colour.rgb *= ao.rgb;
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+  	mat3 basis = MAXTBN;
+  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
+  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 pixel_normal = normalize(basis * normalize(N));
+
+    StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 7) // Full Dirtmap
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+
+  	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+
+    smoothness = _linear(smoothness);
+
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+
+    reflectivity = _linear(reflectivity);
+
+  	vec4 dirtmap = texture(s_dirtmap_uv2, inputs.tex_coord.xy * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
+    float alpha_mask = texture(s_alpha_mask, inputs.tex_coord.xy).a;
+
+    float blend_amount = alpha_mask;
+
+    float hardness = 1.0;
+
+    float blend_2 = blend_amount * mix(1.0, dirtmap.a, blend_amount);
+
+    blend_amount = clamp(((blend_2 - 0.5) * hardness) + 0.5, 0.0, 1.0);
+
+    diffuse_colour.rgb = diffuse_colour.rgb * (mix(dirtmap.rgb, vec3(1.0, 1.0, 1.0), blend_amount));
+  	specular_colour.rgb *= (mix(dirtmap.rgb, vec3(1.0, 1.0, 1.0), blend_amount));
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+  	mat3 basis = MAXTBN;
+  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
+  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 pixel_normal = normalize(basis * normalize(N));
+
+    StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 8) // Full Skin
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+
+  	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+
+    smoothness = _linear(smoothness);
+
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+
+    reflectivity = _linear(reflectivity);
+
+  	vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
+  	float mask_p1 = texture(s_mask1, inputs.tex_coord.xy).r;
+  	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
+  	float mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+  	mat3 basis = MAXTBN;
+  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
+  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+
+  	if (b_do_decal)
+  	{
+  		ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0.0, vec4_uv_rect, 1.0);
+  	}
+
+  	if (b_do_dirt)
+  	{
+  		ps_common_blend_dirtmap(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, vec2(f_uv_offset_u, f_uv_offset_v));
+  	}
+
+  	vec3 pixel_normal = normalize(basis * normalize(N));
+
+    SkinLightingModelMaterial skin_mat = create_skin_lighting_material(vec2(smoothness, reflectivity), vec3(mask_p1, mask_p2, mask_p3), diffuse_colour.rgb, specular_colour.rgb, pixel_normal, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = skin_lighting_model_directional_light(light_color0, light_vector, eye_vector, skin_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 9) // Full Standard
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+
+  	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+
+    smoothness = _linear(smoothness);
+
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+
+    reflectivity = _linear(reflectivity);
+
+  	float mask_p1 = texture(s_mask1, inputs.tex_coord.xy).r;
+  	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
+  	float mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
+
+
+  	if (b_faction_colouring)
+  	{
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_0.rgb)), mask_p1);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_1.rgb)), mask_p2);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_2.rgb)), mask_p3);
+  	}
+  	else
+  	{
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+  	}
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+  	mat3 basis = MAXTBN;
+  	vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
+  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+
+  	vec3 pixel_normal = normalize(basis * normalize(N));
+
+    StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 10) // Full Tint
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec3 eye_vector = -normalize(vMatrixI[3].xyz - inputs.position);
+
+  	vec3 light_vector = normalize(light_position0.xyz - inputs.position);
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+  	alpha_test(diffuse_colour.a);
+
+    vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
+
+    float smoothness = texture(s_smoothness, inputs.tex_coord.xy).x;
+
+    smoothness = _linear(smoothness);
+
+    float reflectivity = texture(s_reflectivity, inputs.tex_coord.xy).x;
+
+    reflectivity = _linear(reflectivity);
+
+  	vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
+  	float mask_p1 = texture(s_mask1, inputs.tex_coord.xy).r;
+  	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
+  	float mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
+
+  	if (b_faction_colouring)
+  	{
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+  	}
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+  	mat3 basis = MAXTBN;
+  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
+  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 pixel_normal = normalize(basis * normalize(N));
+
+    StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
+
+    vec3 hdr_linear_col = standard_lighting_model_directional_light_UPDATED(light_color0, light_vector, eye_vector, standard_mat);
+
+    vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
+
+    return vec4(ldr_linear_col, 1.0);
+  } else if (i_technique == 11) // Mask 1
+  {
+    vec4 faction_p = texture(s_mask1, inputs.tex_coord.xy);
+
+    return vec4(faction_p.rrr, 1.0);
+  } else if (i_technique == 12) // Mask 2
+  {
+    vec4 faction_p = texture(s_mask2, inputs.tex_coord.xy);
+
+    return vec4(faction_p.rrr, 1.0);
+  } else if (i_technique == 13) // Mask 3
+  {
+    vec4 faction_p = texture(s_mask3, inputs.tex_coord.xy);
+
+    return vec4(faction_p.rrr, 1.0);
+  } else if (i_technique == 14) // N Dot L
+  {
+    if (light_absolute0 == false)
+    {
+      light_position0 = vMatrixI * vec4(light_relative0_x, light_relative0_y, light_relative0_z, 1.0);
+    } else {
+      light_position0 = vec4(light_absolute0_x, light_absolute0_y, light_absolute0_z, 1.0);
+    }
+
+    vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
+    vec3 light_vector = normalize(light_position0.xyz -  inputs.position);
+
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+    mat3 basis = MAXTBN;
+    vec4 Np = texture(s_normal_map, inputs.tex_coord.xy);
+    vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+    vec3 pixel_normal = normalize(basis * normalize(N));
+
+    vec3 ndotl = vec3(clamp(dot(pixel_normal, light_vector), 0.0, 1.0));
+
+    // return vec4(_gamma(ndotl), diffuse_colour.a);
+    return vec4(ndotl, diffuse_colour.a);
+  } else if (i_technique == 15) // Normal
+  {
+    vec3 N = normalSwizzle(texture(s_normal_map, inputs.tex_coord.xy).rgb);
+
+    return vec4(N.rgb, 1.0);
+  } else if (i_technique == 16) // Reflectivity
+  {
+    vec4 reflectivity_p = texture(s_reflectivity, inputs.tex_coord.xy);
+
+    reflectivity_p.rgb = _linear(reflectivity_p.rgb);
+
+    return vec4(reflectivity_p.rrr, 1.0);
+  } else if (i_technique == 17) // Glossiness
+  {
+    vec4 roughness_p = texture(s_smoothness, inputs.tex_coord.xy);
+
+    roughness_p.rgb = _linear(roughness_p.rgb);
+
+    return vec4(roughness_p.rrr, 1.0);
+  } else if (i_technique == 18) // Solid Alpha
+  {
+    vec4 Ct = texture(s_diffuse_colour, inputs.tex_coord.xy);
+
+    return vec4(Ct.aaa, 1.0);
+  } else if (i_technique == 19) // Specular
+  {
+    vec4 specular_p = texture(s_specular_colour, inputs.tex_coord.xy );
+
+    return vec4(specular_p.rgb, 1.0);
+  } else if (i_technique == 20) // World Space Normal
+  {
+    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
+    mat3 basis = MAXTBN;
+    vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
+  	vec3 N = normalSwizzle((Np.rgb * 2.0) - 1.0);
+
+  	vec3 nN = ((normalize(basis * N)) * 0.5) + 0.5;
+
+    return vec4(nN.rgb, 1.0);
+  }
 }
 
 void shadeShadow(V2F inputs)
