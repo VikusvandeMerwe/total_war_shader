@@ -105,7 +105,7 @@ uniform sampler2D s_decal_mask;
 uniform sampler2D s_decal_dirtmap;
 //: param auto channel_anisotropyangle
 uniform sampler2D s_decal_dirtmask;
-//: param auto channel_ambientocclusion
+//: param auto texture_ambientocclusion
 uniform sampler2D s_ambient_occlusion;
 //: param auto channel_blendingmask
 uniform sampler2D s_dirtmap_uv2;
