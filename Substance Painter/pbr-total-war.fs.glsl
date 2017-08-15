@@ -79,7 +79,7 @@ uniform sampler2D s_environment_map;
 uniform sampler2D s_diffuse_colour;
 //: param auto channel_glossiness
 uniform sampler2D s_smoothness;
-//: param auto channel_normal
+//: param auto texture_normal
 uniform sampler2D s_normal_map;
 //: param auto channel_height
 uniform sampler2D s_height_map;
@@ -296,7 +296,9 @@ vec3 normalBlendOriented(vec3 baseNormal, vec3 overNormal)
 
 vec3 getTSNormal(vec2 tex_coord)
 {
-  vec3 baseNormal = (texture(s_normal_map, tex_coord).xyz * vec3(2.0)) + vec3(-1.0, -1.0, 0.0);
+  vec3 baseNormal = texture(s_normal_map, tex_coord).rgb;
+  baseNormal.y = 1.0 - baseNormal.y;
+  baseNormal = (baseNormal * vec3(2.0)) + vec3(-1.0, -1.0, 0.0);
   vec3 overNormal = normalFromHeight(tex_coord, f_height_force);
   vec3 normal = normalSwizzle_UPDATED(normalBlendOriented(baseNormal, overNormal));
   return normal;
