@@ -14,6 +14,10 @@
 //   vec2 multi_tex_coord[8];   // interpolated texture coordinates (uv0-uv7)
 // };
 
+/////////////////////////
+// Parameters
+/////////////////////////
+
 //: param auto camera_view_matrix_it
 uniform mat4 camera_view_matrix_it;
 
@@ -77,6 +81,8 @@ uniform sampler2D s_diffuse_colour;
 uniform sampler2D s_smoothness;
 //: param auto channel_normal
 uniform sampler2D s_normal_map;
+//: param auto channel_height
+uniform sampler2D s_height_map;
 //: param auto channel_specularlevel
 uniform sampler2D s_reflectivity;
 //: param auto channel_specular
@@ -111,6 +117,8 @@ uniform sampler2D s_dirtmap_uv2;
 uniform bool b_alpha_off;
 //: param custom { "default": 0, "label": "Alpha Mode", "min": 0, "max": 2 }
 uniform int i_alpha_mode;
+//: param custom { "default": 1.0, "label": "Height Force", "min": 0.01, "max": 10.0}
+uniform float f_height_force;
 //: param custom { "default": true, "label": "Faction Colouring" }
 uniform bool b_faction_colouring;
 //: param custom { "default": [0.5, 0.1, 0.1, 1.0], "label": "Tint Color 1", "widget": "color" }
@@ -136,14 +144,20 @@ uniform float f_uv2_tile_interval_u;
 //: param custom { "default": 4.0, "label": "Tile Factor V", "min": -100.0, "max": 100.0, "step": 1.0, "group": "Dirt" }
 uniform float f_uv2_tile_interval_v;
 
-/////////////////////////
-// Parameters
-/////////////////////////
+//: param auto channel_normal_is_set
+uniform bool channel_normal_is_set;
+//: param auto normal_blending_mode
+uniform int normal_blending_mode;
+//: param auto normal_y_coeff
+uniform float base_normal_y_coeff;
+//: param auto channel_height_size
+uniform vec4 height_size; // width, height, width_inv, height_inv
 
 const float pi = 3.14159265;
 const float one_over_pi = 0.31830988618379067153776752674503;
 const float real_approx_zero = 0.001;
 const float texture_alpha_ref = 0.5;
+const float HEIGHT_FACTOR = 400.0;
 
 const vec4 vec4_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
 
@@ -254,6 +268,41 @@ float contrast(inout float _val, in float _contrast)
 }
 
 /////////////////////////
+// Height To Normal
+/////////////////////////
+
+vec3 normalFromHeight(vec2 tex_coord, float height_force)
+{
+  // Normal computation using height map
+  float h_r  = textureOffset(s_height_map, tex_coord, ivec2( 1,  0)).r;
+  float h_l  = textureOffset(s_height_map, tex_coord, ivec2(-1,  0)).r;
+  float h_t  = textureOffset(s_height_map, tex_coord, ivec2( 0,  1)).r;
+  float h_b  = textureOffset(s_height_map, tex_coord, ivec2( 0, -1)).r;
+  float h_rt = textureOffset(s_height_map, tex_coord, ivec2( 1,  1)).r;
+  float h_lt = textureOffset(s_height_map, tex_coord, ivec2(-1,  1)).r;
+  float h_rb = textureOffset(s_height_map, tex_coord, ivec2( 1, -1)).r;
+  float h_lb = textureOffset(s_height_map, tex_coord, ivec2(-1, -1)).r;
+
+  vec2 dh_dudv = (0.5 * -height_force) * height_size.xy * vec2(
+    2.0 * (h_l - h_r) + h_lt - h_rt + h_lb - h_rb,
+    2.0 * (h_b - h_t) + h_rb - h_rt + h_lb - h_lt);
+  return normalize(vec3(dh_dudv, HEIGHT_FACTOR));
+}
+
+vec3 normalBlendOriented(vec3 baseNormal, vec3 overNormal)
+{
+    return normalize(baseNormal * dot(baseNormal, overNormal) - overNormal * baseNormal.z);
+}
+
+vec3 getTSNormal(vec2 tex_coord)
+{
+  vec3 baseNormal = (texture(s_normal_map, tex_coord).xyz * vec3(2.0)) + vec3(-1.0, -1.0, 0.0);
+  vec3 overNormal = normalFromHeight(tex_coord, f_height_force);
+  vec3 normal = normalSwizzle_UPDATED(normalBlendOriented(baseNormal, overNormal));
+  return normal;
+}
+
+/////////////////////////
 // Forward Declarations
 /////////////////////////
 
@@ -266,11 +315,6 @@ float get_scurve_y_pos(const float x_coord);
 /////////////////////////
 // Lighting Functions
 /////////////////////////
-
-// vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
-// {
-// 	return textureLod(s_environment_map, texcoordEnvSwizzle(direction).rg, lod).rgb;
-// }
 
 vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
 {
@@ -919,8 +963,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
     mat3 basis = MAXTBN;
-    vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-    vec3 N = normalSwizzle((Np.rgb * 2.0) - 1.0);
+    vec3 N = getTSNormal(inputs.tex_coord.xy);
 
     vec3 nN = normalize(basis * N);
     vec3 refl = reflect(pI, nN);
@@ -958,8 +1001,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
     mat3 basis = MAXTBN;
-    vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-    vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+    vec3 N = getTSNormal(inputs.tex_coord.xy);
 
     ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0, vec4_uv_rect, 1 - inputs.color[0].a);
 
@@ -1010,8 +1052,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
   	mat3 basis = MAXTBN;
-  	vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+    vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	if (b_do_decal)
   	{
@@ -1073,8 +1114,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
   	mat3 basis = MAXTBN;
-  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
-  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
     StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
@@ -1128,8 +1168,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
   	mat3 basis = MAXTBN;
-  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
-  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
     StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
@@ -1174,8 +1213,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
   	mat3 basis = MAXTBN;
-  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
-  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	if (b_do_decal)
   	{
@@ -1244,8 +1282,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
   	mat3 basis = MAXTBN;
-  	vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
@@ -1298,8 +1335,7 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
   	mat3 basis = MAXTBN;
-  	vec4 Np = (texture(s_normal_map, inputs.tex_coord.xy));
-  	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+  	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
     StandardLightingModelMaterial_UPDATED standard_mat = create_standard_lighting_material_UPDATED(diffuse_colour.rgb, specular_colour.rgb, pixel_normal, smoothness, reflectivity, vec4(inputs.position.xyz, 1.0));
@@ -1339,19 +1375,20 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
     mat3 basis = MAXTBN;
-    vec4 Np = texture(s_normal_map, inputs.tex_coord.xy);
-    vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
+    vec3 N = getTSNormal(inputs.tex_coord.xy);
     vec3 pixel_normal = normalize(basis * normalize(N));
 
     vec3 ndotl = vec3(clamp(dot(pixel_normal, light_vector), 0.0, 1.0));
 
-    // return vec4(_gamma(ndotl), diffuse_colour.a);
     return vec4(ndotl, diffuse_colour.a);
   } else if (i_technique == 15) // Normal
   {
-    vec3 N = normalSwizzle(texture(s_normal_map, inputs.tex_coord.xy).rgb);
+    vec3 N = normalSwizzle_UPDATED(getTSNormal(inputs.tex_coord.xy));
+    vec3 nN = (N + vec3(1.0, 1.0, 0.0)) / vec3(2.0);
+    nN.g = 1.0 - nN.g;
+    vec3 normal = vec3(_linear(nN.r), _linear(nN.g), _gamma(nN.b));
 
-    return vec4(N.rgb, 1.0);
+    return vec4(normal, 1.0);
   } else if (i_technique == 16) // Reflectivity
   {
     vec4 reflectivity_p = texture(s_reflectivity, inputs.tex_coord.xy);
@@ -1381,12 +1418,11 @@ vec4 shade(V2F inputs)
     mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
 
     mat3 basis = MAXTBN;
-    vec3 Np = (texture(s_normal_map, inputs.tex_coord.xy)).rgb;
-  	vec3 N = normalSwizzle((Np.rgb * 2.0) - 1.0);
+    vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	vec3 nN = ((normalize(basis * N)) * 0.5) + 0.5;
 
-    return vec4(nN.rgb, 1.0);
+    return vec4(_linear(nN.rgb), 1.0);
   }
 }
 
