@@ -36,21 +36,21 @@ uniform sampler2D s_reflectivity;
 //: param auto channel_specular
 uniform sampler2D s_specular_colour;
 //: param auto channel_user0
-uniform sampler2D s_alpha_mask;
-//: param auto channel_user1
 uniform sampler2D s_mask1;
-//: param auto channel_user2
+//: param auto channel_user1
 uniform sampler2D s_mask2;
-//: param auto channel_user3
+//: param auto channel_user2
 uniform sampler2D s_mask3;
-//: param auto channel_user4
+//: param auto channel_user3
 uniform sampler2D s_decal_diffuse;
-//: param auto channel_user5
+//: param auto channel_user4
 uniform sampler2D s_decal_normal;
-//: param auto channel_user6
+//: param auto channel_user5
 uniform sampler2D s_decal_mask;
-//: param auto channel_user7
+//: param auto channel_user6
 uniform sampler2D s_decal_dirtmask;
+//: param auto channel_user7
+uniform sampler2D s_alpha_mask;
 //: param auto texture_ambientocclusion
 uniform sampler2D s_ambient_occlusion;
 
