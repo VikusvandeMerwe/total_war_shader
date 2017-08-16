@@ -23,6 +23,37 @@ uniform mat4 camera_view_matrix_it;
 
 mat4 vMatrixI = transpose(camera_view_matrix_it);
 
+//: param auto channel_diffuse
+uniform sampler2D s_diffuse_colour;
+//: param auto channel_glossiness
+uniform sampler2D s_smoothness;
+//: param auto texture_normal
+uniform sampler2D s_normal_map;
+//: param auto channel_height
+uniform sampler2D s_height_map;
+//: param auto channel_specularlevel
+uniform sampler2D s_reflectivity;
+//: param auto channel_specular
+uniform sampler2D s_specular_colour;
+//: param auto channel_user0
+uniform sampler2D s_alpha_mask;
+//: param auto channel_user1
+uniform sampler2D s_mask1;
+//: param auto channel_user2
+uniform sampler2D s_mask2;
+//: param auto channel_user3
+uniform sampler2D s_mask3;
+//: param auto channel_user4
+uniform sampler2D s_decal_diffuse;
+//: param auto channel_user5
+uniform sampler2D s_decal_normal;
+//: param auto channel_user6
+uniform sampler2D s_decal_mask;
+//: param auto channel_user7
+uniform sampler2D s_decal_dirtmask;
+//: param auto texture_ambientocclusion
+uniform sampler2D s_ambient_occlusion;
+
 //: param custom {
 //:   "default": 9,
 //:   "label": "Technique",
@@ -52,7 +83,6 @@ mat4 vMatrixI = transpose(camera_view_matrix_it);
 //:   }
 //: }
 uniform int i_technique;
-
 //: param custom { "default": [1.0, 1.0, 1.0], "label": "Light Color", "widget": "color", "group": "Scene Lightning" }
 uniform vec3 light_color0;
 //: param custom { "default": 0, "label": "Relative Light Position X", "min": -100, "max": 100, "group": "Scene Lightning" }
@@ -69,46 +99,8 @@ uniform int light_absolute0_x;
 uniform int light_absolute0_y;
 //: param custom { "default": 10, "label": "Absolute Light Position Z", "min": -100, "max": 100, "group": "Scene Lightning" }
 uniform int light_absolute0_z;
-
-vec4 light_position0;
-
 //: param custom { "default": "Environment_Sharp", "label": "Reflection Map", "usage": "environment", "group": "Scene Lightning" }
 uniform sampler2D s_environment_map;
-
-//: param auto channel_diffuse
-uniform sampler2D s_diffuse_colour;
-//: param auto channel_glossiness
-uniform sampler2D s_smoothness;
-//: param auto texture_normal
-uniform sampler2D s_normal_map;
-//: param auto channel_height
-uniform sampler2D s_height_map;
-//: param auto channel_specularlevel
-uniform sampler2D s_reflectivity;
-//: param auto channel_specular
-uniform sampler2D s_specular_colour;
-//: param auto channel_user0
-uniform sampler2D s_alpha_mask;
-//: param auto channel_user1
-uniform sampler2D s_mask1;
-//: param auto channel_user2
-uniform sampler2D s_mask2;
-//: param auto channel_user3
-uniform sampler2D s_mask3;
-//: param auto channel_user4
-uniform sampler2D s_decal_diffuse;
-//: param auto channel_user5
-uniform sampler2D s_decal_normal;
-//: param auto channel_user6
-uniform sampler2D s_decal_mask;
-//: param auto channel_user7
-uniform sampler2D s_decal_dirtmap;
-//: param auto channel_anisotropyangle
-uniform sampler2D s_decal_dirtmask;
-//: param auto texture_ambientocclusion
-uniform sampler2D s_ambient_occlusion;
-//: param auto channel_blendingmask
-uniform sampler2D s_dirtmap_uv2;
 
 // param custom { "default": true, "label": "Shadows", "group": "Scene Lightning" }
 // uniform bool b_shadows;
@@ -131,6 +123,8 @@ uniform vec4 vec4_colour_2;
 uniform bool b_do_decal;
 //: param custom { "default": false, "label": "Enable Dirt", "group": "Dirt" }
 uniform bool b_do_dirt;
+//: param custom { "default": "default_decaldirtmap", "label": "Decal Dirtmap", "usage": "texture", "group": "Dirt" }
+uniform sampler2D s_decal_dirtmap;
 //: param custom { "default": 1, "label": "Enable Offset U", "min": 0, "max": 1, "group": "Dirt" }
 uniform int i_random_tile_u;
 //: param custom { "default": 1, "label": "Enable Offset V", "min": 0, "max": 1, "group": "Dirt" }
@@ -143,6 +137,10 @@ uniform float f_uv_offset_v;
 uniform float f_uv2_tile_interval_u;
 //: param custom { "default": 4.0, "label": "Tile Factor V", "min": -100.0, "max": 100.0, "step": 1.0, "group": "Dirt" }
 uniform float f_uv2_tile_interval_v;
+//: param custom { "default": "", "label": "Dirtmap", "usage": "texture", "group": "Dirt" }
+uniform sampler2D s_dirtmap_uv2;
+
+vec4 light_position0;
 
 //: param auto channel_normal_is_set
 uniform bool channel_normal_is_set;
@@ -409,7 +407,7 @@ void ps_common_blend_decal(in vec4 colour, in vec3 normal, in vec3 specular, in 
   decal_diffuse.rgb = _linear(decal_diffuse.rgb);
   vec3 dNp = texture(s_decal_normal, decal_uv).rgb;
 	decal_normal = normalSwizzle_UPDATED((dNp.rgb * 2.0) - 1.0);
-	float decal_mask = texture(s_decal_mask, uv).a;
+	float decal_mask = texture(s_decal_mask, uv).r;
 
 	float decalblend = decal_mask * decal_diffuse.a * valpha;
 	oreflectivity = mix(reflectivity, reflectivity * 0.5, decalblend);
@@ -427,13 +425,13 @@ void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specu
 {
 	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
 
-	float mask_alpha = texture(s_decal_dirtmask, uv).a;
+	float mask_alpha = texture(s_decal_dirtmask, uv).r;
 	vec4 dirtmap = texture(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
+  dirtmap.g = 1.0 - dirtmap.g;
 
 	float d_strength = 1.0;
 
-	// vec2 dirt_normal = (vec2(dirtmap.r, dirtmap.g) * 2.0) - 1.0;
-  vec2 dirt_normal = vec2(dirtmap.r, dirtmap.g);
+	vec2 dirt_normal = (vec2(dirtmap.r, dirtmap.g) * 2.0) - 1.0;
 
 	float dirt_alpha = dirtmap.a;
 	float dirt_alpha_blend = mask_alpha * dirt_alpha * d_strength;
@@ -1154,7 +1152,7 @@ vec4 shade(V2F inputs)
     reflectivity = _linear(reflectivity);
 
   	vec4 dirtmap = texture(s_dirtmap_uv2, inputs.tex_coord.xy * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
-    float alpha_mask = texture(s_alpha_mask, inputs.tex_coord.xy).a;
+    float alpha_mask = texture(s_alpha_mask, inputs.tex_coord.xy).r;
 
     float blend_amount = alpha_mask;
 
