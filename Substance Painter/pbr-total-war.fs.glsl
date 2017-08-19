@@ -35,6 +35,8 @@ uniform sampler2D s_height_map;
 uniform sampler2D s_reflectivity;
 //: param auto channel_specular
 uniform sampler2D s_specular_colour;
+//: param auto channel_opacity
+uniform sampler2D s_opacity;
 //: param auto channel_user0
 uniform sampler2D s_mask1;
 //: param auto channel_user1
@@ -54,6 +56,15 @@ uniform sampler2D s_alpha_mask;
 //: param auto texture_ambientocclusion
 uniform sampler2D s_ambient_occlusion;
 
+//: param custom {
+//:   "default": 0,
+//:   "label": "Shader Version",
+//:   "widget": "combobox",
+//:   "values": {
+//:     "v1.2": 0
+//:   }
+//: }
+uniform int i_version;
 //: param custom {
 //:   "default": 9,
 //:   "label": "Technique",
@@ -107,6 +118,8 @@ uniform sampler2D s_environment_map;
 
 //: param custom { "default": true, "label": "Alpha Off" }
 uniform bool b_alpha_off;
+//: param custom { "default": false, "label": "Use Opacity Channel" }
+uniform bool b_use_opacity;
 //: param custom { "default": 0, "label": "Alpha Mode", "min": 0, "max": 2 }
 uniform int i_alpha_mode;
 //: param custom { "default": 1.0, "label": "Height Force", "min": 0.01, "max": 10.0}
@@ -986,7 +999,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-    alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1029,7 +1048,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1077,7 +1102,13 @@ vec4 shade(V2F inputs)
   {
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     return vec4(diffuse_colour.rgb, 1.0);
   } else if (i_technique == 6) // Full Ambient Occlusion
@@ -1095,7 +1126,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1139,7 +1176,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1193,7 +1236,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1249,7 +1298,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1308,7 +1363,13 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
-  	alpha_test(diffuse_colour.a);
+    if (b_use_opacity)
+    {
+      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+    } else
+    {
+      alpha_test(diffuse_colour.a);
+    }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
 
@@ -1405,9 +1466,15 @@ vec4 shade(V2F inputs)
     return vec4(roughness_p.rrr, 1.0);
   } else if (i_technique == 18) // Solid Alpha
   {
-    vec4 Ct = texture(s_diffuse_colour, inputs.tex_coord.xy);
-
-    return vec4(Ct.aaa, 1.0);
+    if (b_use_opacity)
+    {
+      vec4 Ct = texture(s_opacity, inputs.tex_coord.xy);
+      return vec4(Ct.rrr, 1.0);
+    } else
+    {
+      vec4 Ct = texture(s_diffuse_colour, inputs.tex_coord.xy);
+      return vec4(Ct.aaa, 1.0);
+    }
   } else if (i_technique == 19) // Specular
   {
     vec4 specular_p = texture(s_specular_colour, inputs.tex_coord.xy );
