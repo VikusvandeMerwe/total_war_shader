@@ -61,7 +61,7 @@ uniform sampler2D s_ambient_occlusion;
 //:   "label": "Shader Version",
 //:   "widget": "combobox",
 //:   "values": {
-//:     "v1.2": 0
+//:     "v1.3": 0
 //:   }
 //: }
 uniform int i_version;

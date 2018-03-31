@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE sbsbatchnode SYSTEM "glslfx.dtd">
-<glslfx version="1.0.0" author="Tobias Czyzewski">
+<glslfx version="1.3" author="Tobias Czyzewski">
 
 	<!-- TECHNIQUES -->
 	<technique name="Ambient">
