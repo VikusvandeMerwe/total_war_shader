@@ -138,10 +138,10 @@ uniform bool b_do_decal;
 uniform bool b_do_dirt;
 //: param custom { "default": "default_decaldirtmap", "label": "Decal Dirtmap", "usage": "texture", "group": "Dirt" }
 uniform sampler2D s_decal_dirtmap;
-//: param custom { "default": 1, "label": "Enable Offset U", "min": 0, "max": 1, "group": "Dirt" }
-uniform int i_random_tile_u;
-//: param custom { "default": 1, "label": "Enable Offset V", "min": 0, "max": 1, "group": "Dirt" }
-uniform int i_random_tile_v;
+//: param custom { "default": true, "label": "Enable Offset U", "group": "Dirt" }
+uniform bool b_random_tile_u;
+//: param custom { "default": true, "label": "Enable Offset V", "group": "Dirt" }
+uniform bool b_random_tile_v;
 //: param custom { "default": 0.0, "label": "UV Offset U", "min": -1.0, "max": 1.0, "step": 0.01, "group": "Dirt" }
 uniform float f_uv_offset_u;
 //: param custom { "default": 0.0, "label": "UV Offset V", "min": -1.0, "max": 1.0, "step": 0.01, "group": "Dirt" }
@@ -436,7 +436,25 @@ void ps_common_blend_decal(in vec4 colour, in vec3 normal, in vec3 specular, in 
 
 void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specular, inout float reflectivity, out vec4 ocolour, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in vec2 uv_offset)
 {
-	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
+  if (b_random_tile_u)
+  {
+    if (b_random_tile_v)
+    {
+      uv_offset = uv_offset * vec2(1, 1);
+    } else
+    {
+      uv_offset = uv_offset * vec2(1, 0);
+    }
+  } else
+  {
+    if (b_random_tile_v)
+    {
+      uv_offset = uv_offset * vec2(0, 1);
+    } else
+    {
+      uv_offset = uv_offset * vec2(0, 0);
+    }
+  }
 
 	float mask_alpha = texture(s_decal_dirtmask, uv).r;
 	vec4 dirtmap = texture(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
@@ -465,7 +483,25 @@ void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specu
 
 void ps_common_blend_vfx(inout vec4 colour, inout vec3 normal, in vec3 specular, inout float reflectivity, out vec4 ocolour, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in vec2 uv_offset)
 {
-	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
+  if (b_random_tile_u)
+  {
+    if (b_random_tile_v)
+    {
+      uv_offset = uv_offset * vec2(1, 1);
+    } else
+    {
+      uv_offset = uv_offset * vec2(1, 0);
+    }
+  } else
+  {
+    if (b_random_tile_v)
+    {
+      uv_offset = uv_offset * vec2(0, 1);
+    } else
+    {
+      uv_offset = uv_offset * vec2(0, 0);
+    }
+  }
 
 	vec4 dirtmap = texture(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
 
@@ -959,6 +995,8 @@ vec3 tone_map_linear_hdr_pixel_value(in vec3 linear_hdr_pixel_val)
 // Shader entry point
 vec4 shade(V2F inputs)
 {
+  mat3 basis = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
+
   if (i_technique == 0) // Ambient Occlusion
   {
     vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
@@ -973,9 +1011,6 @@ vec4 shade(V2F inputs)
   {
     vec3 pI = normalize(vMatrixI[3].xyz - inputs.position);
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-    mat3 basis = MAXTBN;
     vec3 N = getTSNormal(inputs.tex_coord.xy);
 
     vec3 nN = normalize(basis * N);
@@ -1017,9 +1052,6 @@ vec4 shade(V2F inputs)
 
     reflectivity = _linear(reflectivity);
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-    mat3 basis = MAXTBN;
     vec3 N = getTSNormal(inputs.tex_coord.xy);
 
     ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, inputs.tex_coord.xy, 0, vec4_uv_rect, 1 - inputs.color[0].a);
@@ -1074,9 +1106,6 @@ vec4 shade(V2F inputs)
   	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
   	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  	mat3 basis = MAXTBN;
     vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	if (b_do_decal)
@@ -1148,9 +1177,6 @@ vec4 shade(V2F inputs)
   	diffuse_colour.rgb *= ao.rgb;
   	specular_colour.rgb *= ao.rgb;
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  	mat3 basis = MAXTBN;
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
@@ -1208,9 +1234,6 @@ vec4 shade(V2F inputs)
     diffuse_colour.rgb = diffuse_colour.rgb * (mix(dirtmap.rgb, vec3(1.0, 1.0, 1.0), blend_amount));
   	specular_colour.rgb *= (mix(dirtmap.rgb, vec3(1.0, 1.0, 1.0), blend_amount));
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  	mat3 basis = MAXTBN;
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
@@ -1259,9 +1282,6 @@ vec4 shade(V2F inputs)
   	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
   	float mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  	mat3 basis = MAXTBN;
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	if (b_do_decal)
@@ -1334,9 +1354,6 @@ vec4 shade(V2F inputs)
   		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
   	}
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  	mat3 basis = MAXTBN;
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	vec3 pixel_normal = normalize(basis * normalize(N));
@@ -1393,9 +1410,6 @@ vec4 shade(V2F inputs)
   		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
   	}
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-  	mat3 basis = MAXTBN;
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
 
@@ -1433,9 +1447,6 @@ vec4 shade(V2F inputs)
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
     vec3 light_vector = normalize(light_position0.xyz -  inputs.position);
 
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-    mat3 basis = MAXTBN;
     vec3 N = getTSNormal(inputs.tex_coord.xy);
     vec3 pixel_normal = normalize(basis * normalize(N));
 
@@ -1482,9 +1493,6 @@ vec4 shade(V2F inputs)
     return vec4(specular_p.rgb, 1.0);
   } else if (i_technique == 20) // World Space Normal
   {
-    mat3 MAXTBN = mat3(normalize(inputs.tangent), normalize(inputs.normal), normalize(inputs.bitangent));
-
-    mat3 basis = MAXTBN;
     vec3 N = getTSNormal(inputs.tex_coord.xy);
 
   	vec3 nN = ((normalize(basis * N)) * 0.5) + 0.5;
