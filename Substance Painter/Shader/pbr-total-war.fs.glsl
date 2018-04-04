@@ -887,7 +887,7 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
   return (material.SSAO * (env_light_diffuse + (reflection_shadow_attenuation * env_light_specular_colour))) + (shadow_attenuation * (dlight_specular_colour + dlight_diffuse));
 }
 
-float check_alpha (in float pixel_alpha)
+float check_alpha(in float pixel_alpha)
 {
   // Alpha Enabled
 	if (b_enable_alpha)

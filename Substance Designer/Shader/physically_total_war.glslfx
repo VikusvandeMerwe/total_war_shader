@@ -306,8 +306,8 @@
 	<!-- MISC PARAMETERS -->
 	<uniform name="f_version"							guiGroup="Global"				guiName="Shader Version"		default="1.4"			guiWidget="slider"		guiMin="1.4"			guiMax="1.4"/>
 	<uniform name="b_shadows"							guiGroup="Global"				guiName="Shadows"						default="true"		guiWidget="checkbox"/>
-	<uniform name="b_alpha_off"						guiGroup="Global"				guiName="Alpha Off"					default="true"		guiWidget="checkbox"/>
-	<uniform name="i_alpha_mode"					guiGroup="Global"				guiName="Alpha Mode"				default="0"				guiWidget="slider"		guiMin="0"				guiMax="2" 			guiStep="1"/>
+	<uniform name="b_enable_alpha"				guiGroup="Global"				guiName="Enable Alpha"			default="false"		guiWidget="checkbox"/>
+	<uniform name="i_alpha_mode"					guiGroup="Global"				guiName="Alpha Mode"				default="1"				guiWidget="slider"		guiMin="1"				guiMax="2" 			guiStep="1"/>
 	<uniform name="b_faction_colouring"		guiGroup="Global"				guiName="Faction Colouring"	default="true"		guiWidget="checkbox"/>
 	<uniform name="f_uv_offset_u"					guiGroup="Global"				guiName="UV Offset U"				default="0"				guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
 	<uniform name="f_uv_offset_v"					guiGroup="Global"				guiName="UV Offset V"				default="0"				guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>

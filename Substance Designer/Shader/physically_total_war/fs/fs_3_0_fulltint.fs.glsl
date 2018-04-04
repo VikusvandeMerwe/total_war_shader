@@ -17,7 +17,7 @@ void main()
 
   vec4 diffuse_colour = texture2D(s_diffuse_colour, iFS_TexCoord.xy);
 
-	alpha_test(diffuse_colour.a);
+	float alpha = check_alpha(diffuse_colour.a);
 
   diffuse_colour.rgb = _linear(diffuse_colour.rgb);
 
@@ -57,5 +57,5 @@ void main()
 
   vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-  gl_FragColor = vec4(_gamma(ldr_linear_col), 1.0);
+  gl_FragColor = vec4(_gamma(ldr_linear_col), alpha);
 }

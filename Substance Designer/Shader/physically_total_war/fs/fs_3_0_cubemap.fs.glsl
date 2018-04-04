@@ -17,13 +17,10 @@ void main()
   Np.g = 1.0 - Np.g;
 	vec3 N = normalSwizzle((Np.rgb * 2.0) - 1.0);
 
-  if (true)
-  {
-    vec3 N2p = (texture2D(s_d_normal, iFS_TexCoord.xy * 1.0)).rgb;
-    N2p.g = 1.0 - N2p.g;
-    vec3 N2 = normalSwizzle((N2p.rgb * 2.0) - 1.0);
-    N = vec3(N.x + (N2.x * 1.0), N.y + (N2.y * 1.0), N.z);
-  }
+  vec3 N2p = (texture2D(s_d_normal, iFS_TexCoord.xy * 1.0)).rgb;
+  N2p.g = 1.0 - N2p.g;
+  vec3 N2 = normalSwizzle((N2p.rgb * 2.0) - 1.0);
+  N = vec3(N.x + (N2.x * 1.0), N.y + (N2.y * 1.0), N.z);
 
 	vec3 nN = normalize(basis * N);
 	vec3 refl = reflect(pI, nN);

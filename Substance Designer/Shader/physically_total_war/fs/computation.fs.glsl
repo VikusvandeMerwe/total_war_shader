@@ -34,8 +34,8 @@ uniform samplerCube s_environment_map;
 
 uniform float f_version;              // = 1.4;
 uniform bool b_shadows;               // = true;
-uniform bool b_alpha_off;             // = true;
-uniform int i_alpha_mode;             // = 0;
+uniform bool b_enable_alpha;          // = false;
+uniform int i_alpha_mode;             // = 1;
 uniform bool b_faction_colouring;     // = true;
 uniform float f_uv_offset_u;          // = 0;
 uniform float f_uv_offset_v;          // = 0;
@@ -705,15 +705,33 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
   return (material.SSAO * (env_light_diffuse + (reflection_shadow_attenuation * env_light_specular_colour))) + (shadow_attenuation * (dlight_specular_colour + dlight_diffuse));
 }
 
-void alpha_test (const float pixel_alpha)
+float check_alpha(in float pixel_alpha)
 {
-	if (b_alpha_off == false && i_alpha_mode == 1)
+  // Alpha Enabled
+	if (b_enable_alpha)
 	{
-    if (pixel_alpha - texture_alpha_ref < 0.0)
+    // Alpha Test
+    if (i_alpha_mode == 1)
     {
-      discard;
+      if (pixel_alpha - texture_alpha_ref < 0.0)
+      {
+        discard;
+      } else
+      {
+        return 1.0;
+      }
+    }
+    // Alpha Blend
+    else
+    {
+      return pixel_alpha;
     }
 	}
+  // Alpha Disabled
+  else
+  {
+    return 1.0;
+  }
 }
 
 /////////////////////////
