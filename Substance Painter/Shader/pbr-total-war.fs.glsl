@@ -14,6 +14,9 @@
 //   vec2 multi_tex_coord[8];   // interpolated texture coordinates (uv0-uv7)
 // };
 
+//- Enable alpha blending
+//: state blend over
+
 /////////////////////////
 // Parameters
 /////////////////////////
@@ -112,15 +115,17 @@ uniform int light_absolute0_y;
 uniform int light_absolute0_z;
 //: param custom { "default": "Environment_Sharp", "label": "Reflection Map", "usage": "environment", "group": "Scene Lightning" }
 uniform sampler2D s_environment_map;
+//: param custom { "default": 1.0, "label": "Environment Exposure", "min": 0.0, "max": 10.0, "step": 0.1, "group": "Scene Lightning" }
+uniform float f_environment_exposure;
 
 // param custom { "default": true, "label": "Shadows", "group": "Scene Lightning" }
 // uniform bool b_shadows;
 
-//: param custom { "default": true, "label": "Alpha Off" }
-uniform bool b_alpha_off;
+//: param custom { "default": false, "label": "Enable Alpha" }
+uniform bool b_enable_alpha;
 //: param custom { "default": false, "label": "Use Opacity Channel" }
 uniform bool b_use_opacity;
-//: param custom { "default": 0, "label": "Alpha Mode", "min": 0, "max": 2 }
+//: param custom { "default": 1, "label": "Alpha Mode", "min": 1, "max": 2 }
 uniform int i_alpha_mode;
 //: param custom { "default": 1.0, "label": "Height Force", "min": 0.01, "max": 10.0}
 uniform float f_height_force;
@@ -333,7 +338,7 @@ vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
 {
   vec2 pos = one_over_pi * vec2(atan(-direction.z, -1.0 * direction.x), 2.0 * asin(direction.y));
   pos = (0.5 * pos) + vec2(0.5);
-  return textureLod(s_environment_map, pos, lod).rgb;
+  return textureLod(s_environment_map, pos, lod).rgb * f_environment_exposure;
 }
 
 vec3 cube_ambient(in vec3 N)
@@ -882,15 +887,33 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
   return (material.SSAO * (env_light_diffuse + (reflection_shadow_attenuation * env_light_specular_colour))) + (shadow_attenuation * (dlight_specular_colour + dlight_diffuse));
 }
 
-void alpha_test (const float pixel_alpha)
+float check_alpha (in float pixel_alpha)
 {
-	if (b_alpha_off == false && i_alpha_mode == 1)
+  // Alpha Enabled
+	if (b_enable_alpha)
 	{
-    if (pixel_alpha - texture_alpha_ref < 0.0)
+    // Alpha Test
+    if (i_alpha_mode == 1)
     {
-      discard;
+      if (pixel_alpha - texture_alpha_ref < 0.0)
+      {
+        discard;
+      } else
+      {
+        return 1.0;
+      }
+    }
+    // Alpha Blend
+    else
+    {
+      return pixel_alpha;
     }
 	}
+  // Alpha Disabled
+  else
+  {
+    return 1.0;
+  }
 }
 
 /////////////////////////
@@ -1014,8 +1037,7 @@ vec4 shade(V2F inputs)
     vec3 N = getTSNormal(inputs.tex_coord.xy);
 
     vec3 nN = normalize(basis * N);
-    vec3 refl = reflect(pI, nN);
-    refl.z = -refl.z;
+    vec3 refl = -reflect(pI, nN);
     vec3 env = get_environment_colour_UPDATED(refl, 0.0);
 
     return vec4(env.rgb, 1.0);
@@ -1034,12 +1056,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1064,7 +1088,7 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 4) // Decal Dirt
   {
     if (light_absolute0 == false)
@@ -1080,12 +1104,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1126,20 +1152,22 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 5) // Diffuse
   {
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
-    return vec4(diffuse_colour.rgb, 1.0);
+    return vec4(diffuse_colour.rgb, alpha);
   } else if (i_technique == 6) // Full Ambient Occlusion
   {
     if (light_absolute0 == false)
@@ -1155,12 +1183,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1186,7 +1216,7 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 7) // Full Dirtmap
   {
     if (light_absolute0 == false)
@@ -1202,12 +1232,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1243,7 +1275,7 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 8) // Full Skin
   {
     if (light_absolute0 == false)
@@ -1259,12 +1291,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1302,7 +1336,7 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 9) // Full Standard
   {
     if (light_absolute0 == false)
@@ -1318,12 +1352,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1364,7 +1400,7 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 10) // Full Tint
   {
     if (light_absolute0 == false)
@@ -1380,12 +1416,14 @@ vec4 shade(V2F inputs)
 
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
+    float alpha;
+
     if (b_use_opacity)
     {
-      alpha_test(texture(s_opacity, inputs.tex_coord.xy).r);
+      alpha = check_alpha(texture(s_opacity, inputs.tex_coord.xy).r);
     } else
     {
-      alpha_test(diffuse_colour.a);
+      alpha = check_alpha(diffuse_colour.a);
     }
 
     vec4 specular_colour = texture(s_specular_colour, inputs.tex_coord.xy);
@@ -1419,7 +1457,7 @@ vec4 shade(V2F inputs)
 
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
-    return vec4(ldr_linear_col, 1.0);
+    return vec4(ldr_linear_col, alpha);
   } else if (i_technique == 11) // Mask 1
   {
     vec4 faction_p = texture(s_mask1, inputs.tex_coord.xy);
