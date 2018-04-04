@@ -1,9 +1,16 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
 void main()
 {
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
   vec3 eye_vector = -normalize(vMatrixI[3].xyz - iFS_Wpos);
 
 	vec3 light_vector = normalize(light_position0.xyz - iFS_Wpos);
@@ -26,7 +33,7 @@ void main()
 
   reflectivity = _linear(reflectivity);
 
-	vec3 ao = texture2D(s_ambient_occlusion, iFS_TexCoord.zw).rgb;
+	vec3 ao = texture2D(s_ambient_occlusion, iFS_TexCoord.xy).rgb;
 	float mask_p1 = texture2D(s_mask1, iFS_TexCoord.xy).r;
 	float mask_p2 = texture2D(s_mask2, iFS_TexCoord.xy).r;
 	float mask_p3 = texture2D(s_mask3, iFS_TexCoord.xy).r;

@@ -1,13 +1,16 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
-/////////////////////////
-// Fragment Shader
-/////////////////////////
-
 void main()
 {
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
   vec3 eye_vector = -normalize(vMatrixI[3].xyz - iFS_Wpos);
 
 	vec3 light_vector = normalize(light_position0.xyz - iFS_Wpos);
@@ -31,7 +34,7 @@ void main()
   reflectivity = _linear(reflectivity);
 
 	vec4 dirtmap = texture2D(s_dirtmap_uv2, iFS_TexCoord.xy * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
-  float alpha_mask = texture2D(s_alpha_mask, iFS_TexCoord.zw).a;
+  float alpha_mask = texture2D(s_alpha_mask, iFS_TexCoord.xy).a;
 
   float blend_amount = alpha_mask;
 

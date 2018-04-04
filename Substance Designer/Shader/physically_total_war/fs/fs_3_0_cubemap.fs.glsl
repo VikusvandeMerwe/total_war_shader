@@ -1,13 +1,16 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
-/////////////////////////
-// Fragment Shader
-/////////////////////////
-
 void main()
 {
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
   vec3 pI = normalize(vMatrixI[3].xyz - iFS_Wpos);
 	mat3 basis = MAXTBN;
   vec3 Np = (texture2D(s_normal_map, iFS_TexCoord.xy)).rgb;

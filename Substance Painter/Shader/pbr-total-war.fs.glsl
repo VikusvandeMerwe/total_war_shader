@@ -61,7 +61,7 @@ uniform sampler2D s_ambient_occlusion;
 //:   "label": "Shader Version",
 //:   "widget": "combobox",
 //:   "values": {
-//:     "v1.3": 0
+//:     "v1.4": 0
 //:   }
 //: }
 uniform int i_version;
@@ -126,12 +126,12 @@ uniform int i_alpha_mode;
 uniform float f_height_force;
 //: param custom { "default": true, "label": "Faction Colouring" }
 uniform bool b_faction_colouring;
-//: param custom { "default": [0.5, 0.1, 0.1, 1.0], "label": "Tint Color 1", "widget": "color" }
-uniform vec4 vec4_colour_0;
-//: param custom { "default": [0.3, 0.6, 0.5, 1.0], "label": "Tint Color 2", "widget": "color" }
-uniform vec4 vec4_colour_1;
-//: param custom { "default": [0.5, 0.2, 0.1, 1.0], "label": "Tint Color 3", "widget": "color" }
-uniform vec4 vec4_colour_2;
+//: param custom { "default": [0.5, 0.1, 0.1], "label": "Tint Color 1", "widget": "color" }
+uniform vec3 vec3_colour_0;
+//: param custom { "default": [0.3, 0.6, 0.5], "label": "Tint Color 2", "widget": "color" }
+uniform vec3 vec3_colour_1;
+//: param custom { "default": [0.5, 0.2, 0.1], "label": "Tint Color 3", "widget": "color" }
+uniform vec3 vec3_colour_2;
 //: param custom { "default": false, "label": "Enable Decal" }
 uniform bool b_do_decal;
 //: param custom { "default": false, "label": "Enable Dirt", "group": "Dirt" }
@@ -1102,9 +1102,9 @@ vec4 shade(V2F inputs)
   	float mask_p2 = texture(s_mask2, inputs.tex_coord.xy).r;
   	float	mask_p3 = texture(s_mask3, inputs.tex_coord.xy).r;
 
-  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
-  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
-  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_0.rgb), mask_p1);
+  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_1.rgb), mask_p2);
+  	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_2.rgb), mask_p3);
 
     vec3 N = getTSNormal(inputs.tex_coord.xy);
 
@@ -1343,15 +1343,15 @@ vec4 shade(V2F inputs)
 
   	if (b_faction_colouring)
   	{
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_0.rgb)), mask_p1);
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_1.rgb)), mask_p2);
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec4_colour_2.rgb)), mask_p3);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec3_colour_0.rgb)), mask_p1);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec3_colour_1.rgb)), mask_p2);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * get_adjusted_faction_colour(_linear(vec3_colour_2.rgb)), mask_p3);
   	}
   	else
   	{
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_0.rgb), mask_p1);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_1.rgb), mask_p2);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_2.rgb), mask_p3);
   	}
 
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
@@ -1405,9 +1405,9 @@ vec4 shade(V2F inputs)
 
   	if (b_faction_colouring)
   	{
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
-  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_0.rgb), mask_p1);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_1.rgb), mask_p2);
+  		diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_2.rgb), mask_p3);
   	}
 
   	vec3 N = getTSNormal(inputs.tex_coord.xy);

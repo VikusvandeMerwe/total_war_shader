@@ -1,14 +1,17 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
-/////////////////////////
-// Fragment Shader
-/////////////////////////
-
 void main()
 {
-  vec3 ao = texture2D(s_ambient_occlusion, iFS_TexCoord.zw).rgb;
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
+  vec3 ao = texture2D(s_ambient_occlusion, iFS_TexCoord.xy).rgb;
 
   gl_FragColor = vec4(ao.rgb, 1.0);
 }

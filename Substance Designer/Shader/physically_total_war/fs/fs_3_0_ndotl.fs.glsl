@@ -1,13 +1,16 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
-/////////////////////////
-// Fragment Shader
-/////////////////////////
-
 void main()
 {
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
   vec4 diffuse_colour = texture2D(s_diffuse_colour, iFS_TexCoord.xy);
   vec3 light_vector = normalize(light_position0.xyz -  iFS_Wpos);
 

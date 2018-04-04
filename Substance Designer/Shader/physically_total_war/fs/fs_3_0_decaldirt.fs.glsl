@@ -1,13 +1,16 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
-/////////////////////////
-// Fragment Shader
-/////////////////////////
-
 void main()
 {
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
   vec3 eye_vector = -normalize(vMatrixI[3].xyz - iFS_Wpos);
 
 	vec3 light_vector = normalize(light_position0.xyz - iFS_Wpos);
@@ -34,9 +37,9 @@ void main()
 	float mask_p2 = texture2D(s_mask2, iFS_TexCoord.xy).r;
 	float	mask_p3 = texture2D(s_mask3, iFS_TexCoord.xy).r;
 
-	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_0.rgb), mask_p1);
-	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_1.rgb), mask_p2);
-	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec4_colour_2.rgb), mask_p3);
+	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_0.rgb), mask_p1);
+	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_1.rgb), mask_p2);
+	diffuse_colour.rgb = mix(diffuse_colour.rgb, diffuse_colour.rgb * _linear(vec3_colour_2.rgb), mask_p3);
 
 	mat3 basis = MAXTBN;
 	vec3 Np = (texture2D(s_normal_map, iFS_TexCoord.xy)).rgb;

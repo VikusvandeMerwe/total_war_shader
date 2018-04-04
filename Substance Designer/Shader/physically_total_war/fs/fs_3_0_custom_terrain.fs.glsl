@@ -1,13 +1,16 @@
 //////////////////////////////// Fragment shader
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 #include "computation.fs.glsl"
 
-/////////////////////////
-// Fragment Shader
-/////////////////////////
-
 void main()
 {
+  if (f_version != internal_version)
+  {
+    discard;
+  }
+
   vec3 eye_vector = -normalize(vMatrixI[3].xyz - iFS_Wpos);
 
 	vec3 light_vector = normalize(light_position0.xyz - iFS_Wpos);
@@ -35,7 +38,7 @@ void main()
   Np.g = 1.0 - Np.g;
 	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
 
-	ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, iFS_TexCoord.xy, 0, vec4_uv_rect, 1 - iFS_Color.a);
+	ps_common_blend_decal(diffuse_colour, N, specular_colour.rgb, reflectivity, diffuse_colour, N, specular_colour.rgb, reflectivity, iFS_TexCoord.xy, 0, vec4_uv_rect, 1.0);
 
 
 	vec3 pixel_normal = normalize(basis * normalize(N));

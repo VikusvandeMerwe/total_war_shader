@@ -1,24 +1,15 @@
 //////////////////////////////// Computation
-#version 120
-#extension GL_ARB_shader_texture_lod : require
+// #version 120
+// #extension GL_ARB_shader_texture_lod : require
 
-varying vec4 iFS_TexCoord;
-varying vec3 iFS_I;
+varying vec3 iFS_Nml;
+varying vec2 iFS_TexCoord;
 varying vec3 iFS_Tgt;
 varying vec3 iFS_Btgt;
-varying vec3 iFS_Nml;
 varying vec3 iFS_Wpos;
 varying vec4 iFS_Color;
 
-uniform mat4 wvpMatrix;
-uniform mat4 wMatrix;
-uniform mat4 vMatrix;
 uniform mat4 vMatrixI;
-
-uniform float light_position0_x = 0.0;
-uniform float light_position0_y = 0.0;
-uniform float light_position0_z = 0.0;
-uniform vec3 light_color0 = vec3(1.0, 1.0, 1.0);
 
 uniform sampler2D s_diffuse_colour;
 uniform sampler2D s_smoothness;
@@ -41,27 +32,33 @@ uniform sampler2D s_displacement;
 uniform samplerCube s_ambient;
 uniform samplerCube s_environment_map;
 
-uniform bool b_shadows = true;
-uniform bool b_alpha_off = true;
-uniform int i_alpha_mode = 0;
-uniform bool b_faction_colouring = true;
-uniform float f_uv_offset_u = 0;
-uniform float f_uv_offset_v = 0;
-uniform bool b_do_decal = false;
-uniform bool b_do_dirt = false;
-uniform vec4 vec4_colour_0 = vec4(0.5, 0.1, 0.1, 1.0);
-uniform vec4 vec4_colour_1 = vec4(0.3, 0.6, 0.5, 1.0);
-uniform vec4 vec4_colour_2 = vec4(0.5, 0.2, 0.1, 1.0);
-uniform int i_random_tile_u = 1;
-uniform int i_random_tile_v = 1;
-uniform float f_uv2_tile_interval_u = 4.0;
-uniform float f_uv2_tile_interval_v = 4.0;
-uniform vec4 vec4_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
-
+uniform float f_version;              // = 1.4;
+uniform bool b_shadows;               // = true;
+uniform bool b_alpha_off;             // = true;
+uniform int i_alpha_mode;             // = 0;
+uniform bool b_faction_colouring;     // = true;
+uniform float f_uv_offset_u;          // = 0;
+uniform float f_uv_offset_v;          // = 0;
+uniform bool b_do_decal;              // = false;
+uniform bool b_do_dirt;               // = false;
+uniform float light_position0_x;      // = 0.0;
+uniform float light_position0_y;      // = 0.0;
+uniform float light_position0_z;      // = 0.0;
+uniform vec3 light_color0;            // = vec3(1.0, 1.0, 1.0);
+uniform vec3 vec3_colour_0;           // = vec3(0.5, 0.1, 0.1);
+uniform vec3 vec3_colour_1;           // = vec3(0.3, 0.6, 0.5);
+uniform vec3 vec3_colour_2;           // = vec3(0.5, 0.2, 0.1);
+uniform int i_random_tile_u;          // = 1;
+uniform int i_random_tile_v;          // = 1;
+uniform float f_uv2_tile_interval_u;  // = 4.0;
+uniform float f_uv2_tile_interval_v;  // = 4.0;
+uniform vec4 vec4_uv_rect;            // = vec4(0.0, 0.0, 1.0, 1.0);
 
 /////////////////////////
 // Parameters
 /////////////////////////
+
+const float internal_version = 1.4;
 
 mat3 MAXTBN = mat3(normalize(iFS_Tgt), normalize(iFS_Nml), normalize(iFS_Btgt));
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE sbsbatchnode SYSTEM "glslfx.dtd">
-<glslfx version="1.3" author="Tobias Czyzewski">
+<glslfx version="1.4" author="Tobias Czyzewski">
 
 	<!-- TECHNIQUES -->
 	<technique name="Ambient">
@@ -270,12 +270,10 @@
 	<!-- INPUT VERTEX FORMAT -->
 	<vertexformat name="iVS_Position"			semantic="position"/>
 	<vertexformat name="iVS_Normal"				semantic="normal"/>
+	<vertexformat name="iVS_TexCoord"			semantic="texcoord0"/>
 	<vertexformat name="iVS_Tangent"			semantic="tangent0"/>
 	<vertexformat name="iVS_Bitangent"		semantic="binormal0"/>
-	<vertexformat name="iVS_TexCoord0"		semantic="texcoord0"/>
-	<vertexformat name="iVS_TexCoord1"		semantic="texcoord1"/>
-	<vertexformat name="iVS_Color"				semantic="texcoord4"/>
-	<vertexformat name="iVS_Alpha"				semantic="texcoord5"/>
+	<vertexformat name="iVS_Color"				semantic="color"/>
 
 	<!-- SAMPLERS -->
 	<sampler name="s_diffuse_colour"			usage="tw_diffuse"/>
@@ -300,30 +298,31 @@
 	<sampler name="s_environment_map"			usage="tw_reflection"/>
 
 	<!-- MATRICES -->
-	<uniform name="wvpMatrix"							semantic="worldviewprojection"/>
 	<uniform name="wMatrix"								semantic="world"/>
-	<uniform name="vMatrix"								semantic="worldview"/>
+	<uniform name="wvpMatrix"							semantic="worldviewprojection"/>
+	<uniform name="witMatrix"							semantic="worldinversetranspose"/>
 	<uniform name="vMatrixI"							semantic="viewinverse"/>
 
 	<!-- MISC PARAMETERS -->
-	<uniform name="b_shadows"							guiGroup="Global"				guiName="Shadows"						default="true"									guiWidget="checkbox"/>
-	<uniform name="b_alpha_off"						guiGroup="Global"				guiName="Alpha Off"					default="true"									guiWidget="checkbox"/>
-	<uniform name="i_alpha_mode"					guiGroup="Global"				guiName="Alpha Mode"				default="0"											guiWidget="slider"		guiMin="0"				guiMax="2" 			guiStep="1"/>
-	<uniform name="b_faction_colouring"		guiGroup="Global"				guiName="Faction Colouring"	default="true"									guiWidget="checkbox"/>
-	<uniform name="f_uv_offset_u"					guiGroup="Global"				guiName="UV Offset U"				default="0"											guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
-	<uniform name="f_uv_offset_v"					guiGroup="Global"				guiName="UV Offset V"				default="0"											guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
-	<uniform name="b_do_decal"						guiGroup="Global"				guiName="Enable Decal"			default="false"									guiWidget="checkbox"/>
-	<uniform name="b_do_dirt"							guiGroup="Global"				guiName="Enable Dirt"				default="false"									guiWidget="checkbox"/>
-	<uniform name="light_position0_x"			guiGroup="Light"				guiName="Light Position X"	default="0.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
-	<uniform name="light_position0_y"			guiGroup="Light"				guiName="Light Position Y"	default="0.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
-	<uniform name="light_position0_z"			guiGroup="Light"				guiName="Light Position Z"	default="0.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
-	<uniform name="light_color0"					guiGroup="Light"				guiName="Light Color"				default="(1.0, 1.0, 1.0)"				guiWidget="color"			guiMin="0.0"			guiMax="1.0"/>
-	<uniform name="vec4_colour_0"					guiGroup="Tint"					guiName="Tint Color 1"			default="(0.5, 0.1, 0.1, 1.0)"	guiWidget="color"			guiMin="0.0"			guiMax="1.0"/>
-	<uniform name="vec4_colour_1"					guiGroup="Tint"					guiName="Tint Color 2"			default="(0.3, 0.6, 0.5, 1.0)"	guiWidget="color"			guiMin="0.0"			guiMax="1.0"/>
-	<uniform name="vec4_colour_2"					guiGroup="Tint"					guiName="Tint Color 3"			default="(0.5, 0.2, 0.1, 1.0)"	guiWidget="color"			guiMin="0.0"			guiMax="1.0"/>
-	<uniform name="i_random_tile_u"				guiGroup="Dirt Tile"		guiName="Dirt Tile U"				default="1"											guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
-	<uniform name="i_random_tile_v"				guiGroup="Dirt Tile"		guiName="Dirt Tile V"				default="1"											guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
-	<uniform name="f_uv2_tile_interval_u"	guiGroup="Detail Tile"	guiName="Detail Tile U"			default="4.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"	guiStep="1.0"/>
-	<uniform name="f_uv2_tile_interval_v"	guiGroup="Detail Tile"	guiName="Detail Tile V"			default="4.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" 	guiStep="1.0"/>
+	<uniform name="f_version"							guiGroup="Global"				guiName="Shader Version"		default="1.4"			guiWidget="slider"		guiMin="1.4"			guiMax="1.4"/>
+	<uniform name="b_shadows"							guiGroup="Global"				guiName="Shadows"						default="true"		guiWidget="checkbox"/>
+	<uniform name="b_alpha_off"						guiGroup="Global"				guiName="Alpha Off"					default="true"		guiWidget="checkbox"/>
+	<uniform name="i_alpha_mode"					guiGroup="Global"				guiName="Alpha Mode"				default="0"				guiWidget="slider"		guiMin="0"				guiMax="2" 			guiStep="1"/>
+	<uniform name="b_faction_colouring"		guiGroup="Global"				guiName="Faction Colouring"	default="true"		guiWidget="checkbox"/>
+	<uniform name="f_uv_offset_u"					guiGroup="Global"				guiName="UV Offset U"				default="0"				guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
+	<uniform name="f_uv_offset_v"					guiGroup="Global"				guiName="UV Offset V"				default="0"				guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
+	<uniform name="b_do_decal"						guiGroup="Global"				guiName="Enable Decal"			default="false"		guiWidget="checkbox"/>
+	<uniform name="b_do_dirt"							guiGroup="Global"				guiName="Enable Dirt"				default="false"		guiWidget="checkbox"/>
+	<uniform name="light_position0_x"			guiGroup="Light"				guiName="Light Position X"	default="0.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
+	<uniform name="light_position0_y"			guiGroup="Light"				guiName="Light Position Y"	default="0.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
+	<uniform name="light_position0_z"			guiGroup="Light"				guiName="Light Position Z"	default="0.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
+	<uniform name="light_color0"					guiGroup="Light"				guiName="Light Color"													guiWidget="color"/>
+	<uniform name="vec3_colour_0"					guiGroup="Tint"					guiName="Tint Color 1"												guiWidget="color"/>
+	<uniform name="vec3_colour_1"					guiGroup="Tint"					guiName="Tint Color 2"												guiWidget="color"/>
+	<uniform name="vec3_colour_2"					guiGroup="Tint"					guiName="Tint Color 3"												guiWidget="color"/>
+	<uniform name="i_random_tile_u"				guiGroup="Dirt Tile"		guiName="Dirt Tile U"				default="1"				guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
+	<uniform name="i_random_tile_v"				guiGroup="Dirt Tile"		guiName="Dirt Tile V"				default="1"				guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
+	<uniform name="f_uv2_tile_interval_u"	guiGroup="Detail Tile"	guiName="Detail Tile U"			default="4.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"	guiStep="1.0"/>
+	<uniform name="f_uv2_tile_interval_v"	guiGroup="Detail Tile"	guiName="Detail Tile V"			default="4.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" 	guiStep="1.0"/>
 
 </glslfx>
