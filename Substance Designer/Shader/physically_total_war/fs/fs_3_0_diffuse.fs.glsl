@@ -11,11 +11,11 @@ void main()
     discard;
   }
 
-  vec4 diffuse_colour = texture2D(s_diffuse_colour, iFS_TexCoord.xy);
+  vec4 diffuse_color = texture2D(s_diffuse_color, iFS_UV.xy);
 
-	float alpha = check_alpha(diffuse_colour.a);
+	float alpha = check_alpha(diffuse_color.a);
 
-  diffuse_colour.rgb = _linear(diffuse_colour.rgb);
+  diffuse_color.rgb = _linear(diffuse_color.rgb);
 
-  gl_FragColor = vec4(_gamma(diffuse_colour.rgb), alpha);
+  gl_FragColor = vec4(diffuse_color.rgb, alpha);
 }

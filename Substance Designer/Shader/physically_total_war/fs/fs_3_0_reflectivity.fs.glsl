@@ -11,9 +11,9 @@ void main()
     discard;
   }
 
-  vec4 reflectivity_p = texture2D(s_reflectivity, iFS_TexCoord.xy);
+  vec4 reflectivity_p = texture2D(s_reflectivity, iFS_UV.xy);
 
   reflectivity_p.rgb = _linear(reflectivity_p.rgb);
 
-  gl_FragColor = vec4(_gamma(reflectivity_p.rrr), 1.0);
+  gl_FragColor = vec4(reflectivity_p.rgb, 1.0);
 }

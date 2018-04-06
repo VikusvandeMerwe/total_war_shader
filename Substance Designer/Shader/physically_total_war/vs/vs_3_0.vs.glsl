@@ -3,35 +3,30 @@
 
 attribute vec4 iVS_Position;
 attribute vec4 iVS_Normal;
-attribute vec2 iVS_TexCoord;
+attribute vec2 iVS_UV;
 attribute vec4 iVS_Tangent;
 attribute vec4 iVS_Bitangent;
-attribute vec4 iVS_Color;
+attribute vec4 iVS_VertexColor;
 
-varying vec3 iFS_Nml;
-varying vec2 iFS_TexCoord;
-varying vec3 iFS_Tgt;
-varying vec3 iFS_Btgt;
-varying vec3 iFS_Wpos;
-varying vec4 iFS_Color;
+varying vec3 iFS_Normal;
+varying vec2 iFS_UV;
+varying vec3 iFS_Tangent;
+varying vec3 iFS_Bitangent;
+varying vec3 iFS_PointWS;
+varying vec4 iFS_VertexColor;
 
-uniform mat4 wMatrix;
-uniform mat4 wvpMatrix;
-uniform mat4 witMatrix;
+uniform mat4 worldMatrix;
+uniform mat4 worldViewProjMatrix;
+uniform mat4 worldInverseTransposeMatrix;
 
 void main()
 {
-	gl_Position = wvpMatrix * iVS_Position;
+	gl_Position = worldViewProjMatrix * iVS_Position;
 
-	// iFS_TexCoord.y += 1.0;
-	// iFS_I = normalize(vMatrix[3] - (wMatrix * iVS_Position)).xyz;
-	// iFS_Tgt = mat3(wMatrix) * iVS_Tangent;
-	// iFS_Btgt = mat3(wMatrix) * iVS_Bitangent;
-	// iFS_Nml = mat3(wMatrix) * iVS_Normal;
-	iFS_Nml = normalize((witMatrix * iVS_Normal).xyz);
-	iFS_TexCoord = iVS_TexCoord;
-	iFS_Tgt = normalize((witMatrix * iVS_Tangent).xyz);
-	iFS_Btgt = normalize((witMatrix * iVS_Bitangent).xyz);
-	iFS_Wpos = (wMatrix * iVS_Position).xyz;
-	iFS_Color = iVS_Color;
+	iFS_Normal = normalize((worldInverseTransposeMatrix * iVS_Normal).xyz);
+	iFS_UV = iVS_UV;
+	iFS_Tangent = normalize((worldInverseTransposeMatrix * iVS_Tangent).xyz);
+	iFS_Bitangent = normalize((worldInverseTransposeMatrix * iVS_Bitangent).xyz);
+	iFS_PointWS = (worldMatrix * iVS_Position).xyz;
+	iFS_VertexColor = iVS_VertexColor;
 }

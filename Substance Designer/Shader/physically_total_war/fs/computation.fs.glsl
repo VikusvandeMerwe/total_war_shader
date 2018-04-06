@@ -2,21 +2,20 @@
 // #version 120
 // #extension GL_ARB_shader_texture_lod : require
 
-varying vec3 iFS_Nml;
-varying vec2 iFS_TexCoord;
-varying vec3 iFS_Tgt;
-varying vec3 iFS_Btgt;
-varying vec3 iFS_Wpos;
-varying vec4 iFS_Color;
+varying vec3 iFS_Normal;
+varying vec2 iFS_UV;
+varying vec3 iFS_Tangent;
+varying vec3 iFS_Bitangent;
+varying vec3 iFS_PointWS;
+varying vec4 iFS_VertexColor;
 
-uniform mat4 vMatrixI;
+uniform mat4 viewInverseMatrix;
 
-uniform sampler2D s_diffuse_colour;
+uniform sampler2D s_diffuse_color;
 uniform sampler2D s_smoothness;
 uniform sampler2D s_normal_map;
-uniform sampler2D s_d_normal;
 uniform sampler2D s_reflectivity;
-uniform sampler2D s_specular_colour;
+uniform sampler2D s_specular_color;
 uniform sampler2D s_alpha_mask;
 uniform sampler2D s_mask1;
 uniform sampler2D s_mask2;
@@ -28,15 +27,14 @@ uniform sampler2D s_decal_mask;
 uniform sampler2D s_decal_dirtmap;
 uniform sampler2D s_decal_dirtmask;
 uniform sampler2D s_ambient_occlusion;
-uniform sampler2D s_displacement;
 uniform samplerCube s_ambient;
-uniform samplerCube s_environment_map;
+uniform sampler2D s_environment_map;
 
 uniform float f_version;              // = 1.4;
 uniform bool b_shadows;               // = true;
 uniform bool b_enable_alpha;          // = false;
 uniform int i_alpha_mode;             // = 1;
-uniform bool b_faction_colouring;     // = true;
+uniform bool b_faction_coloring;      // = true;
 uniform float f_uv_offset_u;          // = 0;
 uniform float f_uv_offset_v;          // = 0;
 uniform bool b_do_decal;              // = false;
@@ -44,10 +42,12 @@ uniform bool b_do_dirt;               // = false;
 uniform float light_position0_x;      // = 0.0;
 uniform float light_position0_y;      // = 0.0;
 uniform float light_position0_z;      // = 0.0;
-uniform vec3 light_color0;            // = vec3(1.0, 1.0, 1.0);
-uniform vec3 vec3_colour_0;           // = vec3(0.5, 0.1, 0.1);
-uniform vec3 vec3_colour_1;           // = vec3(0.3, 0.6, 0.5);
-uniform vec3 vec3_colour_2;           // = vec3(0.5, 0.2, 0.1);
+uniform vec3 light_color0  = vec3(1.0, 1.0, 1.0);
+uniform float f_environment_rotation; // = 0.0;
+uniform float f_environment_exposure; // = 1.0;
+uniform vec3 vec3_color_0 = vec3(0.5, 0.1, 0.1);
+uniform vec3 vec3_color_1 = vec3(0.3, 0.6, 0.5);
+uniform vec3 vec3_color_2 = vec3(0.5, 0.2, 0.1);
 uniform int i_random_tile_u;          // = 1;
 uniform int i_random_tile_v;          // = 1;
 uniform float f_uv2_tile_interval_u;  // = 4.0;
@@ -60,9 +60,11 @@ uniform vec4 vec4_uv_rect;            // = vec4(0.0, 0.0, 1.0, 1.0);
 
 const float internal_version = 1.4;
 
-mat3 MAXTBN = mat3(normalize(iFS_Tgt), normalize(iFS_Nml), normalize(iFS_Btgt));
+// iFS_Bitangent can't be used anymore as it produces faulty results
+// mat3 MAXTBN = mat3(normalize(iFS_Tangent), normalize(iFS_Normal), normalize(iFS_Bitangent));
+mat3 MAXTBN = mat3(normalize(iFS_Tangent), normalize(iFS_Normal), cross(iFS_Normal, iFS_Tangent));
 
-vec4 light_position0 = vMatrixI * vec4(light_position0_x, light_position0_y, light_position0_z, 1.0);
+vec4 light_position0 = viewInverseMatrix * vec4(light_position0_x, light_position0_y, light_position0_z, 1.0);
 
 const float pi = 3.14159265;
 const float one_over_pi = 1.0 / 3.14159265;
@@ -109,16 +111,16 @@ float get_game_hdr_lighting_multiplier()
 	return 5000.0;
 }
 
-float get_luminance(in vec3 colour)
+float get_luminance(in vec3 color)
 {
 	vec3 lumCoeff = vec3(0.299, 0.587, 0.114);
-	float luminance = dot(colour, lumCoeff);
+	float luminance = dot(color, lumCoeff);
 	return clamp(luminance, 0.0, 1.0);
 }
 
-vec3 get_adjusted_faction_colour(in vec3 colour)
+vec3 get_adjusted_faction_color(in vec3 color)
 {
-	vec3 fc = colour;
+	vec3 fc = color;
 	float lum = get_luminance(fc);
 	float dark_scale = 1.5;
 	float light_scale = 0.5;
@@ -180,7 +182,7 @@ float contrast(inout float _val, in float _contrast)
 /////////////////////////
 
 vec3 tone_map_linear_hdr_pixel_value(in vec3 linear_hdr_pixel_val);
-vec4 HDR_RGB_To_HDR_CIE_Log_Y_xy(in vec3 linear_colour_val);
+vec4 HDR_RGB_To_HDR_CIE_Log_Y_xy(in vec3 linear_color_val);
 vec4 tone_map_HDR_CIE_Log_Y_xy_To_LDR_CIE_Yxy(in vec4 hdr_LogYxy);
 vec4 LDR_CIE_Yxy_To_Linear_LDR_RGB(in vec4 ldr_cie_Yxy);
 float get_scurve_y_pos(const float x_coord);
@@ -189,9 +191,29 @@ float get_scurve_y_pos(const float x_coord);
 // Lighting Functions
 /////////////////////////
 
-vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
+// vec3 samplePanoramicLod(sampler2D map, vec3 dir, float lod)
+// {
+// 	float n = length(dir.xz);
+// 	vec2 pos = vec2((n > 0.0000001) ? dir.x / n : 0.0, dir.y);
+// 	pos = acos(pos) * one_over_pi;
+// 	pos.x = (dir.z > 0.0) ? pos.x * 0.5 : 1.0 - (pos.x * 0.5);
+// 	pos.y = 1.0 - pos.y;
+//  return texture2DLod(map, pos, lod).rgb;
+// }
+
+vec3 rotate(vec3 v, float a)
 {
-	return _linear(textureCubeLod(s_environment_map, texcoordEnvSwizzle(direction), lod).rgb);
+	float angle = a * 2.0 * pi;
+	float ca = cos(angle);
+	float sa = sin(angle);
+	return vec3(v.x * ca + v.z * sa, v.y, v.z * ca - v.x * sa);
+}
+
+vec3 get_environment_color_UPDATED(in vec3 direction , in float lod)
+{
+  vec2 pos = one_over_pi * vec2(atan(-direction.z, -1.0 * direction.x), 2.0 * asin(direction.y));
+  pos = (0.5 * pos) + vec2(0.5);
+  return _linear(texture2DLod(s_environment_map, pos, lod).rgb) * f_environment_exposure;
 }
 
 vec3 cube_ambient(in vec3 N)
@@ -263,7 +285,7 @@ vec3 fresnel_full(in vec3 R, in float c)
 // Decal / Dirt
 /////////////////////////
 
-void ps_common_blend_decal(in vec4 colour, in vec3 normal, in vec3 specular, in float reflectivity, out vec4 ocolour, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in float decal_index, in vec4 uv_rect_coords, in float valpha)
+void ps_common_blend_decal(in vec4 color, in vec3 normal, in vec3 specular, in float reflectivity, out vec4 ocolor, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in float decal_index, in vec4 uv_rect_coords, in float valpha)
 {
 	vec2 decal_top_left = uv_rect_coords.xy;
 	vec2 decal_dimensions = uv_rect_coords.zw - uv_rect_coords.xy;
@@ -274,7 +296,7 @@ void ps_common_blend_decal(in vec4 colour, in vec3 normal, in vec3 specular, in 
 	vec3 decal_normal;
 
 	decal_diffuse = texture2D(s_decal_diffuse, decal_uv).rgba;
-  decal_diffuse.rgb = _linear(decal_diffuse.rgb);
+  // decal_diffuse.rgb = _linear(decal_diffuse.rgb);
   vec3 dNp = texture2D(s_decal_normal, decal_uv).rgb;
   dNp.g = 1.0 - dNp.g;
 	decal_normal = normalSwizzle_UPDATED((dNp.rgb * 2.0) - 1.0);
@@ -282,17 +304,17 @@ void ps_common_blend_decal(in vec4 colour, in vec3 normal, in vec3 specular, in 
 
 	float decalblend = decal_mask * decal_diffuse.a * valpha;
 	oreflectivity = mix(reflectivity, reflectivity * 0.5, decalblend);
-	ocolour = vec4(1.0);
+	ocolor = vec4(1.0);
 	onormal = vec3(0.0, 0.0, 1.0);
 	ospecular = mix(specular, decal_diffuse.rgb, decalblend);
 
-	ocolour.rgb = mix(colour.rgb, decal_diffuse.rgb, decalblend);
+	ocolor.rgb = mix(color.rgb, decal_diffuse.rgb, decalblend);
 
 	onormal.xyz = mix(onormal.xyz, decal_normal.rgb, decalblend);
 	onormal.xyz = vec3(normal.xy + onormal.xy, normal.z);
 }
 
-void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specular, inout float reflectivity, out vec4 ocolour, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in vec2 uv_offset)
+void ps_common_blend_dirtmap(inout vec4 color, inout vec3 normal, in vec3 specular, inout float reflectivity, out vec4 ocolor, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in vec2 uv_offset)
 {
 	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
 
@@ -307,13 +329,13 @@ void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specu
 	float dirt_alpha = dirtmap.a;
 	float dirt_alpha_blend = mask_alpha * dirt_alpha * d_strength;
 
-	vec3 dirt_colour = vec3(0.03, 0.03, 0.02);
-	ocolour = colour;
+	vec3 dirt_color = vec3(0.03, 0.03, 0.02);
+	ocolor = color;
 	onormal = normal;
 
-	ocolour.rgb = mix(colour.rgb, dirt_colour, dirt_alpha_blend);
+	ocolor.rgb = mix(color.rgb, dirt_color, dirt_alpha_blend);
 
-	ospecular = mix(specular, dirt_colour, dirt_alpha_blend);
+	ospecular = mix(specular, dirt_color, dirt_alpha_blend);
 
 	onormal.xz += (dirt_normal.xy * mask_alpha * d_strength);
 	onormal = normalize(onormal);
@@ -321,14 +343,14 @@ void ps_common_blend_dirtmap(inout vec4 colour, inout vec3 normal, in vec3 specu
 	oreflectivity = reflectivity;
 }
 
-void ps_common_blend_vfx(inout vec4 colour, inout vec3 normal, in vec3 specular, inout float reflectivity, out vec4 ocolour, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in vec2 uv_offset)
+void ps_common_blend_vfx(inout vec4 color, inout vec3 normal, in vec3 specular, inout float reflectivity, out vec4 ocolor, out vec3 onormal, out vec3 ospecular, out float oreflectivity, in vec2 uv, in vec2 uv_offset)
 {
 	uv_offset = uv_offset * vec2(i_random_tile_u, i_random_tile_v);
 
 	vec4 dirtmap = texture2D(s_decal_dirtmap, (uv + uv_offset) * vec2(f_uv2_tile_interval_u, f_uv2_tile_interval_v));
   dirtmap.g = 1.0 - dirtmap.g;
 
-	ocolour = vec4(mix(colour.rgb, dirtmap.rgb, dirtmap.a), 1.0);
+	ocolor = vec4(mix(color.rgb, dirtmap.rgb, dirtmap.a), 1.0);
 
 	onormal = normal;
 	ospecular = specular;
@@ -347,14 +369,14 @@ struct SkinLightingModelMaterial
   float SubSurfaceStrength;
 	float BackScatterStrength;
   vec3 Color;
-	vec3 specular_colour;
+	vec3 specular_color;
 	vec3 Normal;
 	float Depth;
 	float Shadow;
 	float SSAO;
 };
 
-SkinLightingModelMaterial create_skin_lighting_material(in vec2 _MaterialMap, in vec3 _SkinMap, in vec3 _Color, in vec3 _specular_colour, in vec3 _Normal, in vec4 _worldposition)
+SkinLightingModelMaterial create_skin_lighting_material(in vec2 _MaterialMap, in vec3 _SkinMap, in vec3 _Color, in vec3 _specular_color, in vec3 _Normal, in vec4 _worldposition)
 {
 	SkinLightingModelMaterial material;
 
@@ -364,7 +386,7 @@ SkinLightingModelMaterial create_skin_lighting_material(in vec2 _MaterialMap, in
 	material.SubSurfaceStrength = _SkinMap.y;
 	material.BackScatterStrength = _SkinMap.z;
 	material.Color = _Color;
-	material.specular_colour = _specular_colour;
+	material.specular_color = _specular_color;
 	material.Normal = normalize(_Normal);
 	material.Depth = 1.0;
 	material.Shadow = 1.0;
@@ -373,13 +395,13 @@ SkinLightingModelMaterial create_skin_lighting_material(in vec2 _MaterialMap, in
 	return material;
 }
 
-vec3 skin_shading(in vec3 L, in vec3 N, in vec3 V, in float sss_strength, in vec3 colour1, in vec3 colour2)
+vec3 skin_shading(in vec3 L, in vec3 N, in vec3 V, in float sss_strength, in vec3 color1, in vec3 color2)
 {
 	float ndotl = dot(N, -L);
 
 	vec3 diff1 = vec3(ndotl * clamp(((ndotl * 0.8) + 0.3) / 1.44, 0.0, 1.0));
-	vec3 diff2 = colour1 * (clamp(((ndotl * 0.9) + 0.5) / 1.44, 0.0, 1.0)) * clamp(1.0 - (diff1 + 0.3), 0.0, 1.0);
-	vec3 diff3 = colour2 * (clamp(((ndotl * 0.3) + 0.3) / 2.25, 0.0, 1.0)) * (1.0 - diff1) * (1.0 - diff2);
+	vec3 diff2 = color1 * (clamp(((ndotl * 0.9) + 0.5) / 1.44, 0.0, 1.0)) * clamp(1.0 - (diff1 + 0.3), 0.0, 1.0);
+	vec3 diff3 = color2 * (clamp(((ndotl * 0.3) + 0.3) / 2.25, 0.0, 1.0)) * (1.0 - diff1) * (1.0 - diff2);
 
 	vec3 mixDiff = diff1 + diff2 + diff3;
 
@@ -417,9 +439,9 @@ vec3 skin_lighting_model_directional_light(in vec3 LightColor, in vec3 normalise
 
 	float backscatter = pow(clamp(dot(skinlm_material.Normal, normalised_light_dir), 0.0, 1.0), 2.0) * pow(clamp(dot(normalised_view_dir, -normalised_light_dir), 0.0, 1.0), 4.0) * skinlm_material.BackScatterStrength;
 
-	vec3 backscatter_colour = mix(LightColor, LightColor * vec3(0.7, 0.0, 0.0), skinlm_material.SubSurfaceStrength) * diffuse_scale_factor * backscatter * skinlm_material.Shadow;
+	vec3 backscatter_color = mix(LightColor, LightColor * vec3(0.7, 0.0, 0.0), skinlm_material.SubSurfaceStrength) * diffuse_scale_factor * backscatter * skinlm_material.Shadow;
 
-	dlight_diffuse += (skinlm_material.Color.rgb * backscatter_colour * get_skin_dlight_diffuse_scaler());
+	dlight_diffuse += (skinlm_material.Color.rgb * backscatter_color * get_skin_dlight_diffuse_scaler());
 
 	vec3  env_light_diffuse = skinlm_material.Color.rgb * cube_ambient(skinlm_material.Normal).rgb;
 
@@ -429,7 +451,7 @@ vec3 skin_lighting_model_directional_light(in vec3 LightColor, in vec3 normalise
 
   vec3 reflected_view_vec = reflect(-normalised_view_dir, skinlm_material.Normal);
 
- vec3 rim_env_colour = cube_ambient(reflected_view_vec).rgb;
+ vec3 rim_env_color = cube_ambient(reflected_view_vec).rgb;
 
 	float rimfresnel = clamp(1.0 - dot(-normalised_view_dir, skinlm_material.Normal), 0.0, 1.0);
 
@@ -438,7 +460,7 @@ vec3 skin_lighting_model_directional_light(in vec3 LightColor, in vec3 normalise
 
 	float upness = max(dot(normalize(skinlm_material.Normal + vec3(0.0, 0.75, 0.0)), vec3(0.0, 1.0, 0.0)), 0.0);
 
-  vec3  env_light_specular = (riml * upness * rim_env_colour);
+  vec3  env_light_specular = (riml * upness * rim_env_color);
 
 	float   shadow_attenuation      = skinlm_material.Shadow;
 
@@ -451,8 +473,8 @@ vec3 skin_lighting_model_directional_light(in vec3 LightColor, in vec3 normalise
 
 struct StandardLightingModelMaterial_UPDATED
 {
-	vec3 Diffuse_Colour;
-  vec3 Specular_Colour;
+	vec3 Diffuse_Color;
+  vec3 Specular_Color;
 	vec3 Normal;
 	float Smoothness;
   float Reflectivity;
@@ -461,12 +483,12 @@ struct StandardLightingModelMaterial_UPDATED
 	float SSAO;
 };
 
-StandardLightingModelMaterial_UPDATED create_standard_lighting_material_UPDATED(in vec3 _DiffuseColor, in vec3 _Specular_Colour, in vec3 _Normal, in float _Smoothness, in float _Reflectivity, in vec4 _worldposition)
+StandardLightingModelMaterial_UPDATED create_standard_lighting_material_UPDATED(in vec3 _DiffuseColor, in vec3 _Specular_Color, in vec3 _Normal, in float _Smoothness, in float _Reflectivity, in vec4 _worldposition)
 {
   StandardLightingModelMaterial_UPDATED material;
 
-  material.Diffuse_Colour = _DiffuseColor;
-  material.Specular_Colour = _Specular_Colour;
+  material.Diffuse_Color = _DiffuseColor;
+  material.Specular_Color = _Specular_Color;
   material.Normal = _Normal;
   material.Smoothness = _Smoothness;
   material.Reflectivity = _Reflectivity;
@@ -673,21 +695,21 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
 
 	float env_map_lod = roughness * (texture_num_lods - 1.0);
 
-  vec3 environment_colour = get_environment_colour_UPDATED(reflected_view_vec, env_map_lod);
+  vec3 environment_color = get_environment_color_UPDATED(rotate(reflected_view_vec, f_environment_rotation), env_map_lod);
 
   vec3 dlight_pixel_reflectivity = get_reflectivity_dir_light(normalised_light_dir, material.Normal, normalised_view_dir, reflected_view_vec, material.Reflectivity, material.Smoothness, roughness);
-  vec3 dlight_specular_colour = dlight_pixel_reflectivity * material.Specular_Colour * LightColor;
+  vec3 dlight_specular_color = dlight_pixel_reflectivity * material.Specular_Color * LightColor;
   // All photons not accounted for by reflectivity are accounted by scattering. From the energy difference between incoming light and emitted light we could calculate the amount of energy turned into heat. This energy would not be enough to make a viewable difference at standard illumination levels.
   vec3 dlight_material_scattering  = 1.0 - max(dlight_pixel_reflectivity, material.Reflectivity);
 
   vec3  env_light_pixel_reflectivity = max(vec3(material.Reflectivity), get_reflectivity_env_light(reflected_view_vec, material.Normal, normalised_view_dir, material.Reflectivity, material.Smoothness, roughness));
-  vec3  env_light_specular_colour = environment_colour * env_light_pixel_reflectivity * material.Specular_Colour;
+  vec3  env_light_specular_color = environment_color * env_light_pixel_reflectivity * material.Specular_Color;
 
-	vec3  dlight_diffuse = material.Diffuse_Colour * normal_dot_light_vec * LightColor * dlight_material_scattering;
+	vec3  dlight_diffuse = material.Diffuse_Color * normal_dot_light_vec * LightColor * dlight_material_scattering;
 
-	vec3 ambient_colour = cube_ambient(material.Normal);
+	vec3 ambient_color = cube_ambient(material.Normal);
 
-  vec3 env_light_diffuse = ambient_colour * material.Diffuse_Colour * (1.0 - material.Reflectivity);
+  vec3 env_light_diffuse = ambient_color * material.Diffuse_Color * (1.0 - material.Reflectivity);
 
   dlight_diffuse *= diffuse_scale_factor;
 
@@ -702,7 +724,7 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
 	float shadow_attenuation = material.Shadow;
 	float reflection_shadow_attenuation = (1.0 - ((1.0 - material.Shadow) * 0.75));
 
-  return (material.SSAO * (env_light_diffuse + (reflection_shadow_attenuation * env_light_specular_colour))) + (shadow_attenuation * (dlight_specular_colour + dlight_diffuse));
+  return (material.SSAO * (env_light_diffuse + (reflection_shadow_attenuation * env_light_specular_color))) + (shadow_attenuation * (dlight_specular_color + dlight_diffuse));
 }
 
 float check_alpha(in float pixel_alpha)
@@ -738,13 +760,13 @@ float check_alpha(in float pixel_alpha)
 // Tone Mapper
 /////////////////////////
 
-vec4 HDR_RGB_To_HDR_CIE_Log_Y_xy(in vec3 linear_colour_val)
+vec4 HDR_RGB_To_HDR_CIE_Log_Y_xy(in vec3 linear_color_val)
 {
 	mat3 cie_transform_mat = mat3(0.4124, 0.3576, 0.1805,
 										            0.2126, 0.7152, 0.0722,
 										            0.0193, 0.1192, 0.9505);
 
-	vec3 cie_XYZ = cie_transform_mat * linear_colour_val;
+	vec3 cie_XYZ = cie_transform_mat * linear_color_val;
 
 	float denominator = cie_XYZ.x + cie_XYZ.y + cie_XYZ.z;
 

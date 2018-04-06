@@ -11,7 +11,9 @@ void main()
     discard;
   }
 
-  vec4 faction_p = texture2D(s_mask2, iFS_TexCoord.xy);
+  vec4 faction_p = texture2D(s_mask2, iFS_UV.xy);
 
-  gl_FragColor = vec4(faction_p.rrr, 1.0);
+  faction_p.rgb = _linear(faction_p.rgb);
+
+  gl_FragColor = vec4(faction_p.rgb, 1.0);
 }

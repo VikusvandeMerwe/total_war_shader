@@ -11,7 +11,9 @@ void main()
     discard;
   }
 
-  vec3 ao = texture2D(s_ambient_occlusion, iFS_TexCoord.xy).rgb;
+  vec3 ao = texture2D(s_ambient_occlusion, iFS_UV.xy).rgb;
+
+  ao.rgb = _linear(ao.rgb);
 
   gl_FragColor = vec4(ao.rgb, 1.0);
 }

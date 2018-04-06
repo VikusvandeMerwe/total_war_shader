@@ -11,14 +11,16 @@ void main()
     discard;
   }
 
-  mat3 basis = MAXTBN;
+  vec3 pI = -normalize(viewInverseMatrix[3].xyz - iFS_PointWS);
+
+	mat3 basis = MAXTBN;
   vec3 Np = (texture2D(s_normal_map, iFS_UV.xy)).rgb;
   Np.g = 1.0 - Np.g;
 	vec3 N = normalSwizzle_UPDATED((Np.rgb * 2.0) - 1.0);
 
-	vec3 nN = ((normalize(basis * N)) * 0.5) + 0.5;
+	vec3 nN = normalize(basis * normalize(N));
+	vec3 refl = reflect(pI, nN);
+	vec3 env = get_environment_color_UPDATED(rotate(refl, f_environment_rotation), 0.0);
 
-  nN.rgb = _linear(nN.rgb);
-
-  gl_FragColor = vec4(nN.rgb, 1.0);
+  gl_FragColor = vec4(env.rgb, 1.0);
 }

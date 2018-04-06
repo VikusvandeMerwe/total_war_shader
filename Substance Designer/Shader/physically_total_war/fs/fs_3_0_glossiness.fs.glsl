@@ -11,9 +11,9 @@ void main()
     discard;
   }
 
-  vec4 roughness_p = texture2D(s_smoothness, iFS_TexCoord.xy);
+  vec4 glossiness_p = texture2D(s_smoothness, iFS_UV.xy);
 
-  roughness_p.rgb = _linear(roughness_p.rgb);
+  glossiness_p.rgb = _linear(glossiness_p.rgb);
 
-  gl_FragColor = vec4(_gamma(roughness_p.rrr), 1.0);
+  gl_FragColor = vec4(glossiness_p.rgb, 1.0);
 }

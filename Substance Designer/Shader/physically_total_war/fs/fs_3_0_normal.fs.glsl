@@ -11,7 +11,9 @@ void main()
     discard;
   }
 
-  vec3 N = normalSwizzle(texture2D(s_normal_map, iFS_TexCoord.xy).rgb);
+	vec3 Np = (texture2D(s_normal_map, iFS_UV.xy)).rgb;
 
-  gl_FragColor = vec4(N.rgb, 1.0);
+  Np.rgb = _linear(Np.rgb);
+
+  gl_FragColor = vec4(Np.rgb, 1.0);
 }

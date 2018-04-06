@@ -40,6 +40,8 @@ uniform sampler2D s_reflectivity;
 uniform sampler2D s_specular_colour;
 //: param auto channel_opacity
 uniform sampler2D s_opacity;
+//: param auto channel_ambientocclusion
+uniform sampler2D s_ambient_occlusion;
 //: param auto channel_user0
 uniform sampler2D s_mask1;
 //: param auto channel_user1
@@ -56,8 +58,6 @@ uniform sampler2D s_decal_mask;
 uniform sampler2D s_decal_dirtmask;
 //: param auto channel_user7
 uniform sampler2D s_alpha_mask;
-//: param auto texture_ambientocclusion
-uniform sampler2D s_ambient_occlusion;
 
 //: param custom {
 //:   "default": 0,
@@ -75,22 +75,22 @@ uniform int i_version;
 //:   "values": {
 //:     "Ambient Occlusion": 0,
 //:     "Vertex Color": 1,
-//:     "Reflection": 2,
-//:     "Custom Terrain": 3,
-//:     "Decal Dirt": 4,
-//:     "Diffuse": 5,
-//:     "Full Ambient Occlusion": 6,
-//:     "Full Dirtmap": 7,
-//:     "Full Skin": 8,
-//:     "Full Standard": 9,
-//:     "Full Tint": 10,
+//:     "Custom Terrain": 2,
+//:     "Decal Dirt": 3,
+//:     "Diffuse": 4,
+//:     "Full Ambient Occlusion": 5,
+//:     "Full Dirtmap": 6,
+//:     "Full Skin": 7,
+//:     "Full Standard": 8,
+//:     "Full Tint": 9,
+//:     "Glossiness": 10,
 //:     "Mask 1": 11,
 //:     "Mask 2": 12,
 //:     "Mask 3": 13,
 //:     "N Dot L": 14,
 //:     "Normal": 15,
-//:     "Reflectivity": 16,
-//:     "Glossiness": 17,
+//:     "Reflection": 16,
+//:     "Reflectivity": 17,
 //:     "Solid Alpha": 18,
 //:     "Specular": 19,
 //:     "World Space Normal": 20
@@ -117,6 +117,8 @@ uniform int light_absolute0_z;
 uniform sampler2D s_environment_map;
 //: param custom { "default": 1.0, "label": "Environment Exposure", "min": 0.0, "max": 10.0, "step": 0.1, "group": "Scene Lightning" }
 uniform float f_environment_exposure;
+//: param custom { "default": 0.0, "label": "Environment Rotation", "min": 0.0, "max": 1.0, "step": 0.01, "group": "Scene Lightning" }
+uniform float f_environment_rotation;
 
 // param custom { "default": true, "label": "Shadows", "group": "Scene Lightning" }
 // uniform bool b_shadows;
@@ -334,11 +336,19 @@ float get_scurve_y_pos(const float x_coord);
 // Lighting Functions
 /////////////////////////
 
+vec3 rotate(vec3 v, float a)
+{
+	float angle = a * 2.0 * pi;
+	float ca = cos(angle);
+	float sa = sin(angle);
+	return vec3(v.x * ca + v.z * sa, v.y, v.z * ca - v.x * sa);
+}
+
 vec3 get_environment_colour_UPDATED(in vec3 direction , in float lod)
 {
   vec2 pos = one_over_pi * vec2(atan(-direction.z, -1.0 * direction.x), 2.0 * asin(direction.y));
   pos = (0.5 * pos) + vec2(0.5);
-  return textureLod(s_environment_map, pos, lod).rgb * f_environment_exposure;
+  return _linear(textureLod(s_environment_map, pos, lod).rgb) * f_environment_exposure;
 }
 
 vec3 cube_ambient(in vec3 N)
@@ -855,7 +865,7 @@ vec3 standard_lighting_model_directional_light_UPDATED(in vec3 LightColor, in ve
 
 	float env_map_lod = roughness * (texture_num_lods - 1.0);
 
-  vec3 environment_colour = get_environment_colour_UPDATED(reflected_view_vec, env_map_lod);
+  vec3 environment_colour = get_environment_colour_UPDATED(rotate(reflected_view_vec, f_environment_rotation), env_map_lod);
 
   vec3 dlight_pixel_reflectivity = get_reflectivity_dir_light(normalised_light_dir, material.Normal, normalised_view_dir, reflected_view_vec, material.Reflectivity, material.Smoothness, roughness);
   vec3 dlight_specular_colour = dlight_pixel_reflectivity * material.Specular_Colour * LightColor;
@@ -1024,24 +1034,13 @@ vec4 shade(V2F inputs)
   {
     vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
 
-    return vec4(ao.rgb, 1.0);
+    return vec4(_linear(ao.rrr), 1.0);
   } else if (i_technique == 1) // Vertex Color
   {
     vec4 Ct = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
     return vec4(inputs.color[0].rgb, Ct.a);
-  } else if (i_technique == 2) // Reflection
-  {
-    vec3 pI = normalize(vMatrixI[3].xyz - inputs.position);
-
-    vec3 N = getTSNormal(inputs.tex_coord.xy);
-
-    vec3 nN = normalize(basis * N);
-    vec3 refl = -reflect(pI, nN);
-    vec3 env = get_environment_colour_UPDATED(refl, 0.0);
-
-    return vec4(env.rgb, 1.0);
-  } else if (i_technique == 3) // Custom Terrain
+  } else if (i_technique == 2) // Custom Terrain
   {
     if (light_absolute0 == false)
     {
@@ -1089,7 +1088,7 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
-  } else if (i_technique == 4) // Decal Dirt
+  } else if (i_technique == 3) // Decal Dirt
   {
     if (light_absolute0 == false)
     {
@@ -1153,7 +1152,7 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
-  } else if (i_technique == 5) // Diffuse
+  } else if (i_technique == 4) // Diffuse
   {
     vec4 diffuse_colour = texture(s_diffuse_colour, inputs.tex_coord.xy);
 
@@ -1168,7 +1167,7 @@ vec4 shade(V2F inputs)
     }
 
     return vec4(diffuse_colour.rgb, alpha);
-  } else if (i_technique == 6) // Full Ambient Occlusion
+  } else if (i_technique == 5) // Full Ambient Occlusion
   {
     if (light_absolute0 == false)
     {
@@ -1204,8 +1203,8 @@ vec4 shade(V2F inputs)
     reflectivity = _linear(reflectivity);
 
   	vec3 ao = texture(s_ambient_occlusion, inputs.tex_coord.xy).rgb;
-  	diffuse_colour.rgb *= ao.rgb;
-  	specular_colour.rgb *= ao.rgb;
+  	diffuse_colour.rgb *= ao.rrr;
+  	specular_colour.rgb *= ao.rrr;
 
   	vec3 N = getTSNormal(inputs.tex_coord.xy);
   	vec3 pixel_normal = normalize(basis * normalize(N));
@@ -1217,7 +1216,7 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
-  } else if (i_technique == 7) // Full Dirtmap
+  } else if (i_technique == 6) // Full Dirtmap
   {
     if (light_absolute0 == false)
     {
@@ -1276,7 +1275,7 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
-  } else if (i_technique == 8) // Full Skin
+  } else if (i_technique == 7) // Full Skin
   {
     if (light_absolute0 == false)
     {
@@ -1337,7 +1336,7 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
-  } else if (i_technique == 9) // Full Standard
+  } else if (i_technique == 8) // Full Standard
   {
     if (light_absolute0 == false)
     {
@@ -1401,7 +1400,7 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
-  } else if (i_technique == 10) // Full Tint
+  } else if (i_technique == 9) // Full Tint
   {
     if (light_absolute0 == false)
     {
@@ -1458,21 +1457,26 @@ vec4 shade(V2F inputs)
     vec3 ldr_linear_col = clamp(tone_map_linear_hdr_pixel_value(hdr_linear_col), 0.0, 1.0);
 
     return vec4(ldr_linear_col, alpha);
+  } else if (i_technique == 10) // Glossiness
+  {
+    vec4 glossiness_p = texture(s_smoothness, inputs.tex_coord.xy);
+
+    return vec4(_linear(glossiness_p.rrr), 1.0);
   } else if (i_technique == 11) // Mask 1
   {
     vec4 faction_p = texture(s_mask1, inputs.tex_coord.xy);
 
-    return vec4(faction_p.rrr, 1.0);
+    return vec4(_linear(faction_p.rrr), 1.0);
   } else if (i_technique == 12) // Mask 2
   {
     vec4 faction_p = texture(s_mask2, inputs.tex_coord.xy);
 
-    return vec4(faction_p.rrr, 1.0);
+    return vec4(_linear(faction_p.rrr), 1.0);
   } else if (i_technique == 13) // Mask 3
   {
     vec4 faction_p = texture(s_mask3, inputs.tex_coord.xy);
 
-    return vec4(faction_p.rrr, 1.0);
+    return vec4(_linear(faction_p.rrr), 1.0);
   } else if (i_technique == 14) // N Dot L
   {
     if (light_absolute0 == false)
@@ -1499,34 +1503,40 @@ vec4 shade(V2F inputs)
     vec3 normal = vec3(_linear(nN.r), _linear(nN.g), _gamma(nN.b));
 
     return vec4(normal, 1.0);
-  } else if (i_technique == 16) // Reflectivity
+  } else if (i_technique == 16) // Reflection
+  {
+    vec3 pI = normalize(vMatrixI[3].xyz - inputs.position);
+
+    vec3 N = getTSNormal(inputs.tex_coord.xy);
+
+    vec3 nN = normalize(basis * N);
+    vec3 refl = -reflect(pI, nN);
+    vec3 env = get_environment_colour_UPDATED(rotate(refl, f_environment_rotation), 0.0);
+
+    return vec4(env.rgb, 1.0);
+  } else if (i_technique == 17) // Reflectivity
   {
     vec4 reflectivity_p = texture(s_reflectivity, inputs.tex_coord.xy);
 
-    reflectivity_p.rgb = _linear(reflectivity_p.rgb);
-
-    return vec4(reflectivity_p.rrr, 1.0);
-  } else if (i_technique == 17) // Glossiness
-  {
-    vec4 roughness_p = texture(s_smoothness, inputs.tex_coord.xy);
-
-    roughness_p.rgb = _linear(roughness_p.rgb);
-
-    return vec4(roughness_p.rrr, 1.0);
+    return vec4(_linear(reflectivity_p.rrr), 1.0);
   } else if (i_technique == 18) // Solid Alpha
   {
     if (b_use_opacity)
     {
       vec4 Ct = texture(s_opacity, inputs.tex_coord.xy);
-      return vec4(Ct.rrr, 1.0);
+
+      return vec4(_linear(Ct.rrr), 1.0);
     } else
     {
       vec4 Ct = texture(s_diffuse_colour, inputs.tex_coord.xy);
-      return vec4(Ct.aaa, 1.0);
+
+      return vec4(_linear(Ct.aaa), 1.0);
     }
   } else if (i_technique == 19) // Specular
   {
     vec4 specular_p = texture(s_specular_colour, inputs.tex_coord.xy );
+
+    specular_p.rgb = specular_p.rgb;
 
     return vec4(specular_p.rgb, 1.0);
   } else if (i_technique == 20) // World Space Normal

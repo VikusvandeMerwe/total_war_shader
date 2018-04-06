@@ -39,18 +39,6 @@
 		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_color.fs.glsl"/>
 	</technique>
 
-	<technique name="Cubemap">
-		<!-- PROPERTIES -->
-		<property name="blend_enabled"			value="true"/>
-		<property name="blend_func"					value="src_alpha,one_minus_src_alpha"/>
-		<property name="cull_face_enabled"	value="true"/>
-		<property name="cull_face_mode"			value="back"/>
-
-		<!-- SHADERS -->
-		<shader type="vertex"								filename="physically_total_war/vs/vs_3_0.vs.glsl"/>
-		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_cubemap.fs.glsl"/>
-	</technique>
-
 	<technique name="Custom Terrain">
 		<!-- PROPERTIES -->
 		<property name="blend_enabled"			value="true"/>
@@ -147,6 +135,18 @@
 		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_fulltint.fs.glsl"/>
 	</technique>
 
+	<technique name="Glossiness">
+		<!-- PROPERTIES -->
+		<property name="blend_enabled"			value="true"/>
+		<property name="blend_func"					value="src_alpha,one_minus_src_alpha"/>
+		<property name="cull_face_enabled"	value="true"/>
+		<property name="cull_face_mode"			value="back"/>
+
+		<!-- SHADERS -->
+		<shader type="vertex"								filename="physically_total_war/vs/vs_3_0.vs.glsl"/>
+		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_glossiness.fs.glsl"/>
+	</technique>
+
 	<technique name="Mask 1">
 		<!-- PROPERTIES -->
 		<property name="blend_enabled"			value="true"/>
@@ -207,6 +207,18 @@
 		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_normal.fs.glsl"/>
 	</technique>
 
+	<technique name="Reflection">
+		<!-- PROPERTIES -->
+		<property name="blend_enabled"			value="true"/>
+		<property name="blend_func"					value="src_alpha,one_minus_src_alpha"/>
+		<property name="cull_face_enabled"	value="true"/>
+		<property name="cull_face_mode"			value="back"/>
+
+		<!-- SHADERS -->
+		<shader type="vertex"								filename="physically_total_war/vs/vs_3_0.vs.glsl"/>
+		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_reflection.fs.glsl"/>
+	</technique>
+
 	<technique name="Reflectivity">
 		<!-- PROPERTIES -->
 		<property name="blend_enabled"			value="true"/>
@@ -217,18 +229,6 @@
 		<!-- SHADERS -->
 		<shader type="vertex"								filename="physically_total_war/vs/vs_3_0.vs.glsl"/>
 		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_reflectivity.fs.glsl"/>
-	</technique>
-
-	<technique name="Roughness">
-		<!-- PROPERTIES -->
-		<property name="blend_enabled"			value="true"/>
-		<property name="blend_func"					value="src_alpha,one_minus_src_alpha"/>
-		<property name="cull_face_enabled"	value="true"/>
-		<property name="cull_face_mode"			value="back"/>
-
-		<!-- SHADERS -->
-		<shader type="vertex"								filename="physically_total_war/vs/vs_3_0.vs.glsl"/>
-		<shader type="fragment"							filename="physically_total_war/fs/fs_3_0_roughness.fs.glsl"/>
 	</technique>
 
 	<technique name="Solid Alpha">
@@ -270,18 +270,17 @@
 	<!-- INPUT VERTEX FORMAT -->
 	<vertexformat name="iVS_Position"			semantic="position"/>
 	<vertexformat name="iVS_Normal"				semantic="normal"/>
-	<vertexformat name="iVS_TexCoord"			semantic="texcoord0"/>
+	<vertexformat name="iVS_UV"						semantic="texcoord0"/>
 	<vertexformat name="iVS_Tangent"			semantic="tangent0"/>
 	<vertexformat name="iVS_Bitangent"		semantic="binormal0"/>
-	<vertexformat name="iVS_Color"				semantic="color"/>
+	<vertexformat name="iVS_VertexColor"	semantic="color"/>
 
 	<!-- SAMPLERS -->
-	<sampler name="s_diffuse_colour"			usage="tw_diffuse"/>
-	<sampler name="s_smoothness"					usage="tw_glossiness"/>
+	<sampler name="s_diffuse_color"				usage="tw_diffuse"/>
+	<sampler name="s_smoothness"					usage="tw_gloss"/>
 	<sampler name="s_normal_map"					usage="tw_normal"/>
-	<sampler name="s_d_normal"						usage="tw_detailnormal"/>
-	<sampler name="s_reflectivity"				usage="tw_reflectivity"/>
-	<sampler name="s_specular_colour"			usage="tw_specular"/>
+	<sampler name="s_reflectivity"				usage="tw_level"/>
+	<sampler name="s_specular_color"			usage="tw_specular"/>
 	<sampler name="s_alpha_mask"					usage="tw_alpha"/>
 	<sampler name="s_mask1"								usage="tw_mask1"/>
 	<sampler name="s_mask2"								usage="tw_mask2"/>
@@ -293,36 +292,37 @@
 	<sampler name="s_decal_dirtmap"				usage="tw_decaldirtmap"/>
 	<sampler name="s_decal_dirtmask"			usage="tw_decaldirtmask"/>
 	<sampler name="s_ambient_occlusion"		usage="tw_ambientocclusion"/>
-	<sampler name="s_displacement"				usage="tw_displacement"/>
 	<sampler name="s_ambient"							usage="tw_ambient"/>
-	<sampler name="s_environment_map"			usage="tw_reflection"/>
+	<sampler name="s_environment_map"			usage="panorama"/>
 
 	<!-- MATRICES -->
-	<uniform name="wMatrix"								semantic="world"/>
-	<uniform name="wvpMatrix"							semantic="worldviewprojection"/>
-	<uniform name="witMatrix"							semantic="worldinversetranspose"/>
-	<uniform name="vMatrixI"							semantic="viewinverse"/>
+	<uniform name="worldMatrix"						semantic="world"/>
+	<uniform name="worldViewProjMatrix"		semantic="worldviewprojection"/>
+	<uniform name="worldInverseTransposeMatrix"	semantic="worldinversetranspose"/>
+	<uniform name="viewInverseMatrix"			semantic="viewinverse"/>
 
 	<!-- MISC PARAMETERS -->
-	<uniform name="f_version"							guiGroup="Global"				guiName="Shader Version"		default="1.4"			guiWidget="slider"		guiMin="1.4"			guiMax="1.4"/>
-	<uniform name="b_shadows"							guiGroup="Global"				guiName="Shadows"						default="true"		guiWidget="checkbox"/>
-	<uniform name="b_enable_alpha"				guiGroup="Global"				guiName="Enable Alpha"			default="false"		guiWidget="checkbox"/>
-	<uniform name="i_alpha_mode"					guiGroup="Global"				guiName="Alpha Mode"				default="1"				guiWidget="slider"		guiMin="1"				guiMax="2" 			guiStep="1"/>
-	<uniform name="b_faction_colouring"		guiGroup="Global"				guiName="Faction Colouring"	default="true"		guiWidget="checkbox"/>
-	<uniform name="f_uv_offset_u"					guiGroup="Global"				guiName="UV Offset U"				default="0"				guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
-	<uniform name="f_uv_offset_v"					guiGroup="Global"				guiName="UV Offset V"				default="0"				guiWidget="slider"		guiMin="-500.0"		guiMax="500.0" guiStep="1.0"/>
-	<uniform name="b_do_decal"						guiGroup="Global"				guiName="Enable Decal"			default="false"		guiWidget="checkbox"/>
-	<uniform name="b_do_dirt"							guiGroup="Global"				guiName="Enable Dirt"				default="false"		guiWidget="checkbox"/>
-	<uniform name="light_position0_x"			guiGroup="Light"				guiName="Light Position X"	default="0.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
-	<uniform name="light_position0_y"			guiGroup="Light"				guiName="Light Position Y"	default="0.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
-	<uniform name="light_position0_z"			guiGroup="Light"				guiName="Light Position Z"	default="0.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" guiStep="1.0"/>
-	<uniform name="light_color0"					guiGroup="Light"				guiName="Light Color"													guiWidget="color"/>
-	<uniform name="vec3_colour_0"					guiGroup="Tint"					guiName="Tint Color 1"												guiWidget="color"/>
-	<uniform name="vec3_colour_1"					guiGroup="Tint"					guiName="Tint Color 2"												guiWidget="color"/>
-	<uniform name="vec3_colour_2"					guiGroup="Tint"					guiName="Tint Color 3"												guiWidget="color"/>
-	<uniform name="i_random_tile_u"				guiGroup="Dirt Tile"		guiName="Dirt Tile U"				default="1"				guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
-	<uniform name="i_random_tile_v"				guiGroup="Dirt Tile"		guiName="Dirt Tile V"				default="1"				guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
-	<uniform name="f_uv2_tile_interval_u"	guiGroup="Detail Tile"	guiName="Detail Tile U"			default="4.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"	guiStep="1.0"/>
-	<uniform name="f_uv2_tile_interval_v"	guiGroup="Detail Tile"	guiName="Detail Tile V"			default="4.0"			guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" 	guiStep="1.0"/>
+	<uniform name="f_version"								guiGroup="Global"				guiName="Shader Version"				default="1.4"										guiWidget="slider"		guiMin="1.4"			guiMax="1.4"/>
+	<uniform name="b_shadows"								guiGroup="Global"				guiName="Shadows"								default="true"									guiWidget="checkbox"/>
+	<uniform name="b_enable_alpha"					guiGroup="Global"				guiName="Enable Alpha"					default="false"									guiWidget="checkbox"/>
+	<uniform name="i_alpha_mode"						guiGroup="Global"				guiName="Alpha Mode"						default="1"											guiWidget="slider"		guiMin="1"				guiMax="2" 			guiStep="1"/>
+	<uniform name="b_faction_coloring"			guiGroup="Global"				guiName="Faction Coloring"			default="true"									guiWidget="checkbox"/>
+	<uniform name="f_uv_offset_u"						guiGroup="Global"				guiName="UV Offset U"						default="0"											guiWidget="slider"		guiMin="-500.0"		guiMax="500.0"  guiStep="1.0"/>
+	<uniform name="f_uv_offset_v"						guiGroup="Global"				guiName="UV Offset V"						default="0"											guiWidget="slider"		guiMin="-500.0"		guiMax="500.0"  guiStep="1.0"/>
+	<uniform name="b_do_decal"							guiGroup="Global"				guiName="Enable Decal"					default="false"									guiWidget="checkbox"/>
+	<uniform name="b_do_dirt"								guiGroup="Global"				guiName="Enable Dirt"						default="false"									guiWidget="checkbox"/>
+	<uniform name="light_position0_x"				guiGroup="Lighting"			guiName="Light Position X"			default="0.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"  guiStep="1.0"/>
+	<uniform name="light_position0_y"				guiGroup="Lighting"			guiName="Light Position Y"			default="0.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"  guiStep="1.0"/>
+	<uniform name="light_position0_z"				guiGroup="Lighting"			guiName="Light Position Z"			default="0.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"  guiStep="1.0"/>
+	<uniform name="light_color0"						guiGroup="Lighting"			guiName="Light Color"																						guiWidget="color"/>
+	<uniform name="f_environment_exposure"	guiGroup="Lighting"			guiName="Environment Exposure"	default="1.0"										guiWidget="slider"		guiMin="0.0"			guiMax="10.0"		guiStep="0.1"/>
+	<uniform name="f_environment_rotation"	guiGroup="Lighting"			guiName="Environment Rotation"	default="0.0"										guiWidget="angle" 		guiMin="0.0"			guiMax="1.0"		guiStep="0.01"/>
+	<uniform name="vec3_color_0"						guiGroup="Tint"					guiName="Tint Color 1"																					guiWidget="color"/>
+	<uniform name="vec3_color_1"						guiGroup="Tint"					guiName="Tint Color 2"																					guiWidget="color"/>
+	<uniform name="vec3_color_2"						guiGroup="Tint"					guiName="Tint Color 3"																					guiWidget="color"/>
+	<uniform name="i_random_tile_u"					guiGroup="Dirt Tile"		guiName="Dirt Tile U"						default="1"											guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
+	<uniform name="i_random_tile_v"					guiGroup="Dirt Tile"		guiName="Dirt Tile V"						default="1"											guiWidget="slider"		guiMin="0"				guiMax="1" 			guiStep="1"/>
+	<uniform name="f_uv2_tile_interval_u"		guiGroup="Detail Tile"	guiName="Detail Tile U"					default="4.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0"	guiStep="1.0"/>
+	<uniform name="f_uv2_tile_interval_v"		guiGroup="Detail Tile"	guiName="Detail Tile V"					default="4.0"										guiWidget="slider"		guiMin="-100.0"		guiMax="100.0" 	guiStep="1.0"/>
 
 </glslfx>

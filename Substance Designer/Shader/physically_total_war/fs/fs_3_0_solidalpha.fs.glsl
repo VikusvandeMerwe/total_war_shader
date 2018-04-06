@@ -11,7 +11,7 @@ void main()
     discard;
   }
 
-  vec4 Ct = texture2D(s_diffuse_colour, iFS_TexCoord.xy);
+  vec4 Ct = texture2D(s_diffuse_color, iFS_UV.xy);
 
-  gl_FragColor = vec4(Ct.aaa, 1.0);
+  gl_FragColor = vec4(_linear(Ct.aaa), 1.0);
 }
