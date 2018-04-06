@@ -277,20 +277,20 @@
 
 	<!-- SAMPLERS -->
 	<sampler name="s_diffuse_color"				usage="tw_diffuse"/>
-	<sampler name="s_smoothness"					usage="tw_gloss"/>
 	<sampler name="s_normal_map"					usage="tw_normal"/>
+	<sampler name="s_smoothness"					usage="tw_gloss"/>
 	<sampler name="s_reflectivity"				usage="tw_level"/>
 	<sampler name="s_specular_color"			usage="tw_specular"/>
-	<sampler name="s_alpha_mask"					usage="tw_alpha"/>
 	<sampler name="s_mask1"								usage="tw_mask1"/>
 	<sampler name="s_mask2"								usage="tw_mask2"/>
 	<sampler name="s_mask3"								usage="tw_mask3"/>
-	<sampler name="s_dirtmap_uv2"					usage="tw_dirtmap"/>
 	<sampler name="s_decal_diffuse"				usage="tw_decaldiffuse"/>
 	<sampler name="s_decal_normal"				usage="tw_decalnormal"/>
 	<sampler name="s_decal_mask"					usage="tw_decalmask"/>
 	<sampler name="s_decal_dirtmap"				usage="tw_decaldirtmap"/>
 	<sampler name="s_decal_dirtmask"			usage="tw_decaldirtmask"/>
+	<sampler name="s_dirtmap_uv2"					usage="tw_dirtmap"/>
+	<sampler name="s_alpha_mask"					usage="tw_alpha"/>
 	<sampler name="s_ambient_occlusion"		usage="tw_ambientocclusion"/>
 	<sampler name="s_ambient"							usage="tw_ambient"/>
 	<sampler name="s_environment_map"			usage="panorama"/>
