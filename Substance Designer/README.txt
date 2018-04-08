@@ -29,8 +29,8 @@ are supported.
 
 2.
  2.1	Go back to the Total War Shader Package root.
- 2.2	Copy the .sbs file in "Template".
- 2.3	Create a folder somewhere on your computer and paste the file into that folder.
+ 2.2	Copy the .sbs file and the resource folder in "Template".
+ 2.3	Create a folder somewhere on your computer and paste the files into that folder.
 	This folder should be placed there permanently so that it remains accessible by
 	Substance Designer.
  2.4	Launch Substance Designer.
