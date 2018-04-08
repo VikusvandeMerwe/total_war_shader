@@ -73,7 +73,7 @@ uniform sampler2D s_alpha_mask;
 //: }
 uniform int i_version;
 //: param custom {
-//:   "default": 9,
+//:   "default": 8,
 //:   "label": "Technique",
 //:   "widget": "combobox",
 //:   "values": {
