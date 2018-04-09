@@ -348,7 +348,6 @@ vec3 getTSNormal(vec2 tex_coord)
 
   // Normal channel
   vec3 overNormal1 = texture(s_normal_map, tex_coord).rgb;
-  overNormal1.y = 1.0 - overNormal1.y;
 
   // Height channel
   vec3 overNormal2 = normalFromHeight(tex_coord, f_height_force);
